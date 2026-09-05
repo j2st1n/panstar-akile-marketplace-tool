@@ -1505,7 +1505,7 @@
             <span class="xrv-hud-ver">v0.4.2</span>
           </div>
           <div class="xrv-hud-stats" id="xrv-stats-container">
-            ${zh ? '共' : 'Total'} <b id="xrv-stat-total">0</b> ${zh ? '台' : ''} (<span class="xrv-text-green">${zh ? '正常' : 'Normal'} <b id="xrv-stat-normal">0</b></span> / <span class="xrv-text-red">${zh ? '异常' : 'Blocked'} <b id="xrv-stat-blocked">0</b></span>) · <span class="xrv-text-gold">${zh ? '折价捡漏' : 'Deals'} <b id="xrv-stat-discount">0</b> ${zh ? '台' : ''}</span>
+            ${zh ? '共' : 'Total'} <b id="xrv-stat-total">0</b> ${zh ? '台' : ''} (<span class="xrv-text-green">${zh ? 'IP正常' : 'Normal IP'} <b id="xrv-stat-normal">0</b></span> / <span class="xrv-text-red">${zh ? '被墙' : 'Blocked'} <b id="xrv-stat-blocked">0</b></span>) · <span class="xrv-text-gold">${zh ? '折价捡漏' : 'Deals'} <b id="xrv-stat-discount">0</b> ${zh ? '台' : ''}</span>
           </div>
         </div>
         <div class="xrv-hud-body">
