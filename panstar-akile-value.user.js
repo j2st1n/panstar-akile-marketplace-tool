@@ -2,7 +2,7 @@
 // @name         Panstar & Akile 交易所剩余价值计算器
 // @name:en      Panstar & Akile Marketplace Remaining-Value Calculator
 // @namespace    https://github.com/j2st1n/panstar-akile-marketplace-tool
-// @version      0.4.3
+// @version      0.4.4
 // @description  一套脚本同时适配 Panstar 与 Akile 交易所：自动计算每台机器剩余价值、日均持有成本、打折力度（折扣率）、折合月付续费成本，支持科学多维排序（倒贴最多/折扣最大/月均续费最低/日均最低/剩余流量最多）与周期分类筛选（全部/月付/年付）。
 // @description:en  One script for both Panstar and Akile marketplaces: computes remaining value, daily cost, discount rate, normalized monthly renewal cost, multi-dimensional sorting (best bonus, deepest discount, lowest monthly renewal, daily cost, traffic left) and cycle filter (all/monthly/yearly).
 // @author       j2st1n
@@ -1502,8 +1502,8 @@
         <div class="xrv-hud-header">
           <div class="xrv-hud-brand">
             <span class="xrv-hud-logo">⚡</span>
-            <span class="xrv-hud-title">${zh ? 'XRV 交易所助手' : 'XRV Market Assistant'}</span>
-            <span class="xrv-hud-ver">v0.4.3</span>
+            <span class="xrv-hud-title">${zh ? '交易所剩余价值助手' : 'Marketplace Value Assistant'}</span>
+            <span class="xrv-hud-ver">v0.4.4</span>
           </div>
           <div class="xrv-hud-stats" id="xrv-stats-container">
             ${zh ? '共' : 'Total'} <b id="xrv-stat-total">0</b> ${zh ? '台' : ''} (<span class="xrv-text-green">${zh ? 'IP正常' : 'Normal IP'} <b id="xrv-stat-normal">0</b></span> / <span class="xrv-text-red">${zh ? '被墙' : 'Blocked'} <b id="xrv-stat-blocked">0</b></span>) · <span class="xrv-text-gold">${zh ? '折价捡漏' : 'Deals'} <b id="xrv-stat-discount">0</b> ${zh ? '台' : ''}</span>

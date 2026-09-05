@@ -778,9 +778,10 @@ it('mock-marketplace.html 包含尾部 load-more 组件并受置底防守保护'
 // ─── 第六部分：暗色模式架构与 Design Tokens 规范审查 ───
 console.log('\n📌 阶段 6：暗色模式架构与 Design Tokens 规范静态审查');
 
-it('版本号审查：脚本元数据与 HUD 必须统一升级至 v0.4.3', () => {
-  assert.ok(source.includes('@version      0.4.3'), 'UserScript header 必须标注 0.4.3');
-  assert.ok(source.includes('class="xrv-hud-ver">v0.4.3<'), 'HUD 徽章必须显示 v0.4.3');
+it('版本号审查：脚本元数据与 HUD 必须统一升级至 v0.4.4', () => {
+  assert.ok(source.includes('@version      0.4.4'), 'UserScript header 必须标注 0.4.4');
+  assert.ok(source.includes('class="xrv-hud-ver">v0.4.4<'), 'HUD 徽章必须显示 v0.4.4');
+  assert.ok(source.includes('交易所剩余价值助手'), 'HUD 标题必须包含“交易所剩余价值助手”');
 });
 
 it('Design Tokens 基础审查：必须在 :root 中声明明色全套 CSS 变量', () => {
