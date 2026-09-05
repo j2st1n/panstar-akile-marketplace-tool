@@ -5,13 +5,11 @@
 // @version      0.4.0
 // @description  一套脚本同时适配 Panstar 与 Akile 交易所：自动计算每台机器剩余价值、日均持有成本、打折力度（折扣率）、折合月付续费成本，支持科学多维排序（倒贴最多/折扣最大/月均续费最低/日均最低/剩余流量最多）与周期分类筛选（全部/月付/年付）。
 // @description:en  One script for both Panstar and Akile marketplaces: computes remaining value, daily cost, discount rate, normalized monthly renewal cost, multi-dimensional sorting (best bonus, deepest discount, lowest monthly renewal, daily cost, traffic left) and cycle filter (all/monthly/yearly).
-// @author       j2st1n, hj6lago7
+// @author       j2st1n
 // @match        *://panstar.ai/*
 // @match        *://*.panstar.ai/*
 // @match        *://akile.ai/*
 // @match        *://*.akile.ai/*
-// @match        *://127.0.0.1/*
-// @match        *://localhost/*
 // @homepageURL  https://github.com/j2st1n/panstar-akile-marketplace-tool
 // @supportURL   https://github.com/j2st1n/panstar-akile-marketplace-tool/issues
 // @updateURL    https://raw.githubusercontent.com/j2st1n/panstar-akile-marketplace-tool/main/panstar-akile-value.user.js
@@ -23,10 +21,10 @@
 
 // ─────────────────────────────────────────────────────────────
 // Credits & Acknowledgements
-//  作者 Authors: j2st1n, hj6lago7
-//  灵感来源：功能思路受到 SI Xiaolong 的《Akile 交易所剩余价值计算器》
-//  （Greasy Fork 脚本 ID: 576546）启发。
-//  v0.3.0 ~ v0.4.0 版本全面重构 SPA 生命周期、科学价值模型、
+//  作者 Author: j2st1n
+//  致谢：功能思路受到 SI Xiaolong 的《Akile 交易所剩余价值计算器》
+//  （Greasy Fork 脚本 ID: 576546）及早期作者启发。
+//  v0.3.0 ~ v0.4.0 全面重构 SPA 生命周期、科学价值模型、
 //  6 维科学排序矩阵（IP 异常惩罚沉底）与周期分类筛选体系。
 //  依 MIT 许可开源发布。
 // ─────────────────────────────────────────────────────────────

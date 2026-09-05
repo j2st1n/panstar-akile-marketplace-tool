@@ -3,7 +3,7 @@
 // @namespace    https://github.com/j2st1n/panstar-akile-marketplace-tool
 // @version      0.4.0-dev
 // @description  本地开发调试加载器：页面加载时自动从本地 127.0.0.1:8788 拉取最新源码并执行，无需手动反复更新安装
-// @author       j2st1n, hj6lago7
+// @author       j2st1n
 // @match        *://panstar.ai/*
 // @match        *://*.panstar.ai/*
 // @match        *://akile.ai/*
