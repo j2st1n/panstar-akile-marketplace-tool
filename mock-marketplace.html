@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panstar & Akile 交易所本地仿真调试壳 (v0.4.0)</title>
+  <style>
+    :root {
+      --bg-color: #f3f4f6;
+      --card-bg: #ffffff;
+      --text-main: #1f2937;
+      --text-muted: #6b7280;
+      --border-color: #e5e7eb;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+    }
+    .demo-header {
+      background: #1e293b;
+      color: #fff;
+      padding: 12px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .demo-header h1 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .demo-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+    .demo-btn {
+      background: #334155;
+      color: #f8fafc;
+      border: 1px solid #475569;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .demo-btn:hover {
+      background: #475569;
+    }
+    .demo-btn.active {
+      background: #3b82f6;
+      border-color: #60a5fa;
+      color: #fff;
+      font-weight: 600;
+    }
+    .demo-btn-qa {
+      background: #047857;
+      border-color: #059669;
+      color: #ecfdf5;
+      font-weight: 600;
+    }
+    .demo-btn-qa:hover {
+      background: #059669;
+    }
+    .demo-container {
+      max-width: 1280px;
+      margin: 20px auto;
+      padding: 0 16px;
+    }
+    .tips-box {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e40af;
+      padding: 14px 18px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .tips-box strong {
+      color: #1d4ed8;
+    }
+    .tips-box ul {
+      margin: 6px 0 0 18px;
+      padding: 0;
+    }
+
+    /* ─── Akile Arco 栅格仿真 ─── */
+    .akile-view {
+      display: block;
+    }
+    .arco-row {
+      display: flex;
+      flex-wrap: wrap;
+      margin: -8px;
+    }
+    .arco-col {
+      flex: 0 0 33.333333%;
+      max-width: 33.333333%;
+      padding: 8px;
+      box-sizing: border-box;
+    }
+    .server-manage-card {
+      background: #fff;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      position: relative;
+    }
+    .server-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #111827;
+      display: flex;
+      justify-content: space-between;
+    }
+    .shop-server-price {
+      font-size: 18px;
+      font-weight: 700;
+      color: #ef4444;
+    }
+    .server-detail {
+      font-size: 12px;
+      color: #4b5563;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .server-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      padding: 4px 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .info-name {
+      color: #6b7280;
+    }
+    .info-value {
+      color: #1f2937;
+      font-weight: 500;
+    }
+    .load-more-col {
+      width: 100%;
+      flex: 0 0 100%;
+      max-width: 100%;
+    }
+    .load-more-box {
+      width: 100%;
+      text-align: center;
+      padding: 20px 0;
+    }
+    .load-more-btn {
+      padding: 8px 24px;
+      background: #fff;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      cursor: pointer;
+      color: #4b5563;
+      font-size: 13px;
+    }
+
+    /* ─── Panstar 网格仿真 ─── */
+    .panstar-view {
+      display: none;
+      background: #0f172a;
+      padding: 24px;
+      border-radius: 12px;
+      color: #e2e8f0;
+    }
+    .console-marketplace-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    article[data-marketplace-listing-card] {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    }
+    .console-marketplace-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #f8fafc;
+      display: flex;
+      justify-content: space-between;
+    }
+    .console-marketplace-price {
+      font-size: 18px;
+      font-weight: 700;
+      color: #38bdf8;
+    }
+    .console-marketplace-status-chip {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: #334155;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+    .console-marketplace-spec-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      padding: 4px 0;
+      border-bottom: 1px solid #334155;
+    }
+    .console-marketplace-spec-label {
+      color: #94a3b8;
+    }
+    .console-marketplace-spec-value {
+      color: #f1f5f9;
+      font-weight: 500;
+    }
+
+    /* ─── 自动化验收测试浮层 ─── */
+    #qa-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(4px);
+      z-index: 99999;
+      align-items: center;
+      justify-content: center;
+    }
+    .qa-card {
+      background: #fff;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 800px;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.25);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .qa-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 12px;
+    }
+    .qa-header h2 {
+      margin: 0;
+      font-size: 18px;
+      color: #111827;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .qa-close {
+      background: transparent;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: #64748b;
+    }
+    .qa-summary-bar {
+      display: flex;
+      gap: 12px;
+    }
+    .qa-pill {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .qa-pill-pass { background: #dcfce7; color: #15803d; }
+    .qa-pill-fail { background: #fee2e2; color: #b91c1c; }
+    .qa-pill-total { background: #f1f5f9; color: #334155; }
+    .qa-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 13px;
+    }
+    .qa-item {
+      padding: 10px 14px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f8fafc;
+    }
+    .qa-item.pass { border-left: 4px solid #10b981; }
+    .qa-item.fail { border-left: 4px solid #ef4444; background: #fff5f5; }
+    .qa-item-detail {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 顶部开发调试工具栏 -->
+  <div class="demo-header">
+    <h1>
+      <span>🧪 Panstar & Akile 交易所本地仿真调试环境 (v0.4.0)</span>
+      <span style="font-size: 12px; font-weight: normal; color: #94a3b8;">(127.0.0.1:8788)</span>
+    </h1>
+    <div class="demo-actions">
+      <button type="button" class="demo-btn active" id="btn-akile" onclick="switchSite('akile')">切换至 Akile 视图 (Arco 栅格)</button>
+      <button type="button" class="demo-btn" id="btn-panstar" onclick="switchSite('panstar')">切换至 Panstar 视图 (CSS Grid)</button>
+      <button type="button" class="demo-btn demo-btn-qa" onclick="runInBrowserTests()">🧪 运行排序与筛选自动化验收测试</button>
+      <button type="button" class="demo-btn" onclick="testAsyncAdd()">⚡ 模拟 SPA 异步载入卡片</button>
+      <button type="button" class="demo-btn" onclick="testRouteSwitch()">🔀 模拟 SPA 路由切换</button>
+    </div>
+  </div>
+
+  <div class="demo-container">
+    <div class="tips-box">
+      <div>
+        <strong>💡 交易所科学价值模型 v2.0 重构架构指引：</strong>
+        <ul>
+          <li><strong>彻底废除不科学的“天数最长”</strong>：解决年付 200~300 天无脑霸屏置顶、抹杀高性价比月付机器的严重业务失真。</li>
+          <li><strong>🔥 折扣最大 (discountRateDesc)</strong>：按实际折扣率 <code>(V_rem - P_sale) / V_rem</code> 降序，精准挖掘 2折、3折 等大比例让利神机。</li>
+          <li><strong>👑 月均续费最低 (monthlyRenewAsc)</strong>：年付与月付统一折算为每月续费成本升序（年付/12，月付原价），精准发掘绝版“传家宝”。</li>
+          <li><strong>周期分类筛选器</strong>：提供【全部 (All) / 月付 (Monthly) / 年付 (Yearly)】胶囊切换，支持与【隐藏被墙】及【只看折价】组合联动。</li>
+          <li><strong>全量修复无变化 Bug</strong>：重构网络流量分子分母双提取、到期时间容错与微量价格决胜键，确保每个排序选项点击后均有符合预期的视觉重排。</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ═══ 1. Akile 仿真视图 ═══ -->
+    <div id="view-akile" class="akile-view">
+      <div class="arco-row" id="akile-row">
+        
+        <!-- 卡片 1: 倒贴大额捡漏机 (月付，剩余 90 天多周期预付，价值 90，标价 35，倒贴 55) -->
+        <div class="arco-col" id="akile-col-1">
+          <div class="server-manage-card">
+            <div class="server-title">
+              <span>🇭🇰 HK.BGP.Pro 倒贴捡漏</span>
+              <span class="shop-server-price">¥35.00</span>
+            </div>
+            <div class="server-detail">IP正常 | 延迟 38ms</div>
+            <div class="server-info">
+              <span class="info-name">续费价格</span>
+              <span class="info-value">¥30.00 / 月</span>
+            </div>
+            <div class="server-info">
+              <span class="info-name">到期时间</span>
+              <span class="info-value" id="card1-date">2026-06-30 20:00:00</span>
+            </div>
+            <div class="server-info">
+              <span class="info-name">网络</span>
+              <span class="info-value">1000Mbps | <u>120GB</u> / 1000GB</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 卡片 2: 低价但 IP 严重被墙 (月付，售价 9.9，原易霸榜，现应沉底) -->
+        <div class="arco-col" id="akile-col-2">
+          <div class="server-manage-card">
+            <div class="server-title">
+              <span>🇺🇸 LAX.Standard (墙机)</span>
+              <span class="shop-server-price">¥9.90</span>
+            </div>
+            <div class="server-detail">IP被墙 | 端口不可达</div>
+            <div class="server-info">
+              <span class="info-name">续费价格</span>
+              <span class="info-value">¥15.00 / 月</span>
+            </div>
+            <div class="server-info">
+              <span class="info-name">到期时间</span>
+              <span class="info-value" id="card2-date">2026-04-25 10:00:00</span>
+            </div>
+            <div class="server-info">
+              <span class="info-name">网络</span>
+              <span class="info-value">500Mbps | <u>850GB</u> / 1000GB</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 卡片 3: 正常平价稳定机 (月付，剩余价值 25，标价 25) -->
+        <div class="arco-col" id="akile-col-3">
+          <div class="server-manage-card">
+            <div class="server-title">
+              <span>🇯🇵 TYO.Lite 平价稳定机</span>
+              <span class="shop-server-price">¥25.00</span>
+            </div>
+            <div class="server-detail">IP正常 | 延迟 65ms</div>
+            <div class="server-info">
+              <span class="info-name">续费价格</span>
+              <span class="info-value">¥30.00 / 月</span>
+            </div>
+            <div class="server-info">
+              <span class="info-name">到期时间</span>
+              <span class="info-value" id="card3-date">2026-04-20 18:00:00</span>
+            </div>
+            <div class="server-info">
+              <span class="info-name">网络</span>
+              <span class="info-value">200Mbps | <u>50GB</u> / 500GB</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 卡片 4: 绝版特价月付传家宝 (月付，低月付续费 12 元，标价 120 溢价) -->
+        <div class="arco-col" id="akile-col-4">
+          <div class="server-manage-card">
+            <div class="server-title">
+              <span>🇸🇬 SGP.Premium 传家宝月付</span>
+              <span class="shop-server-price">¥120.00</span>
+            </div>
+            <div class="server-detail">IP正常</div>
+            <div class="server-info">
+              <span class="info-name">续费价格</span>
+              <span class="info-value">¥12.00 / 月</span>
+            </div>
+            <div class="server-info">
+              <span class="info-name">到期时间</span>
+              <span class="info-value" id="card4-date">2026-04-10 12:00:00</span>
+            </div>
+            <div class="server-info">
+              <span class="info-name">网络</span>
+              <span class="info-value">1000Mbps | <u>10GB</u> / 2000GB</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 卡片 5: 年付长效省心大盘 (年付，剩余 280 天，售价 180，续费 220/年，折合 18.33/月) -->
+        <div class="arco-col" id="akile-col-5">
+          <div class="server-manage-card">
+            <div class="server-title">
+              <span>🇩🇪 FRA.Storage 年付省心</span>
+              <span class="shop-server-price">¥180.00</span>
+            </div>
+            <div class="server-detail">IP正常</div>
+            <div class="server-info">
+              <span class="info-name">续费价格</span>
+              <span class="info-value">¥220.00 / 年</span>
+            </div>
+            <div class="server-info">
+              <span class="info-name">到期时间</span>
+              <span class="info-value" id="card5-date">2027-01-15 00:00:00</span>
+            </div>
+            <div class="server-info">
+              <span class="info-name">网络</span>
+              <span class="info-value">1000Mbps | <u>500GB</u> / 5000GB</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 卡片 6: 🔥 爆款打折神机 (月付，价值 75，售价 15，折扣率高达 80% / 2.0折，折扣榜首) -->
+        <div class="arco-col" id="akile-col-6">
+          <div class="server-manage-card">
+            <div class="server-title">
+              <span>🇯🇵 OSA.Flash 爆款打折神机 (🔥2.0折)</span>
+              <span class="shop-server-price">¥15.00</span>
+            </div>
+            <div class="server-detail">IP正常 | 延迟 42ms</div>
+            <div class="server-info">
+              <span class="info-name">续费价格</span>
+              <span class="info-value">¥75.00 / 月</span>
+            </div>
+            <div class="server-info">
+              <span class="info-name">到期时间</span>
+              <span class="info-value" id="card6-date">2026-05-01 00:00:00</span>
+            </div>
+            <div class="server-info">
+              <span class="info-name">网络</span>
+              <span class="info-value">1000Mbps | <u>100GB</u> / 1000GB</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 卡片 7: 👑 绝版年付传家宝 (年付，续费仅 36/年，折合 3.00/月，月均续费榜首，不限流量) -->
+        <div class="arco-col" id="akile-col-7">
+          <div class="server-manage-card">
+            <div class="server-title">
+              <span>👑 LON.Legendary 绝版年付传家宝</span>
+              <span class="shop-server-price">¥88.00</span>
+            </div>
+            <div class="server-detail">IP正常 | 延迟 130ms</div>
+            <div class="server-info">
+              <span class="info-name">续费价格</span>
+              <span class="info-value">¥36.00 / 年</span>
+            </div>
+            <div class="server-info">
+              <span class="info-name">到期时间</span>
+              <span class="info-value" id="card7-date">2026-09-01 00:00:00</span>
+            </div>
+            <div class="server-info">
+              <span class="info-name">网络</span>
+              <span class="info-value">1000Mbps | 不限流量 / Unlimited</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 卡片 8: 🎁 特价年付倒贴王 (年付，价值 235，售价 100，倒贴 135 元，倒贴榜首) -->
+        <div class="arco-col" id="akile-col-8">
+          <div class="server-manage-card">
+            <div class="server-title">
+              <span>🇩🇪 BER.Annual 特价年付倒贴王</span>
+              <span class="shop-server-price">¥100.00</span>
+            </div>
+            <div class="server-detail">IP正常</div>
+            <div class="server-info">
+              <span class="info-name">续费价格</span>
+              <span class="info-value">¥260.00 / 年</span>
+            </div>
+            <div class="server-info">
+              <span class="info-name">到期时间</span>
+              <span class="info-value" id="card8-date">2027-02-20 00:00:00</span>
+            </div>
+            <div class="server-info">
+              <span class="info-name">网络</span>
+              <span class="info-value">1000Mbps | <u>200GB</u> / 2000GB</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 卡片 9: ⏱ 过期机器边界测试 (月付，售价 5 元，已过期，日均最低应沉底) -->
+        <div class="arco-col" id="akile-col-9">
+          <div class="server-manage-card">
+            <div class="server-title">
+              <span>🇺🇸 SJC.ZeroDay 过期边界测试机</span>
+              <span class="shop-server-price">¥5.00</span>
+            </div>
+            <div class="server-detail">IP正常</div>
+            <div class="server-info">
+              <span class="info-name">续费价格</span>
+              <span class="info-value">¥20.00 / 月</span>
+            </div>
+            <div class="server-info">
+              <span class="info-name">到期时间</span>
+              <span class="info-value" id="card9-date">2026-03-01 00:00:00</span>
+            </div>
+            <div class="server-info">
+              <span class="info-name">网络</span>
+              <span class="info-value">100Mbps | <u>50GB</u> / 100GB</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 卡片 10: 📶 满血流量怪兽 (月付，剩余流量比例 99.999%，流量榜首) -->
+        <div class="arco-col" id="akile-col-10">
+          <div class="server-manage-card">
+            <div class="server-title">
+              <span>🇭🇰 HK.Traffic.King 满血流量怪兽</span>
+              <span class="shop-server-price">¥45.00</span>
+            </div>
+            <div class="server-detail">IP正常 | 延迟 35ms</div>
+            <div class="server-info">
+              <span class="info-name">续费价格</span>
+              <span class="info-value">¥35.00 / 月</span>
+            </div>
+            <div class="server-info">
+              <span class="info-name">到期时间</span>
+              <span class="info-value" id="card10-date">2026-04-20 00:00:00</span>
+            </div>
+            <div class="server-info">
+              <span class="info-name">网络</span>
+              <span class="info-value">2000Mbps | <u>10MB</u> / 10000GB</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 尾部加载更多组件 (验证永远在最后，不会被排序冲到上面) -->
+        <div class="arco-col load-more-col load-more">
+          <div class="load-more-box">
+            <button type="button" class="load-more-btn" onclick="alert('测试：加载更多按钮在所有排序下均固定置底！')">点击加载更多机器...</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ═══ 2. Panstar 仿真视图 ═══ -->
+    <div id="view-panstar" class="panstar-view">
+      <div class="console-marketplace-grid" data-marketplace-listing-grid="1">
+        
+        <article data-marketplace-listing-card="1" id="panstar-card-1">
+          <div class="console-marketplace-title">
+            <span>US-West Silicon Valley Pro</span>
+            <span class="console-marketplace-price">$28.00</span>
+          </div>
+          <div class="console-marketplace-status-chip">IP normal</div>
+          <div class="console-marketplace-spec-row">
+            <span class="console-marketplace-spec-label">Renewal Price</span>
+            <span class="console-marketplace-spec-value">$35.00 / Month</span>
+          </div>
+          <div class="console-marketplace-spec-row">
+            <span class="console-marketplace-spec-label">Expiration Time</span>
+            <span class="console-marketplace-spec-value" id="panstar1-date">2026-05-10 12:00:00</span>
+          </div>
+          <div class="console-marketplace-spec-row">
+            <span class="console-marketplace-spec-label">Network</span>
+            <span class="console-marketplace-spec-value">1 Gbps | <span class="underline">200GB</span> / 1000GB</span>
+          </div>
+        </article>
+
+        <article data-marketplace-listing-card="1" id="panstar-card-2">
+          <div class="console-marketplace-title">
+            <span>JP-Tokyo Budget (Blocked)</span>
+            <span class="console-marketplace-price">$3.50</span>
+          </div>
+          <div class="console-marketplace-status-chip">IP blocked</div>
+          <div class="console-marketplace-spec-row">
+            <span class="console-marketplace-spec-label">Renewal Price</span>
+            <span class="console-marketplace-spec-value">$6.00 / Month</span>
+          </div>
+          <div class="console-marketplace-spec-row">
+            <span class="console-marketplace-spec-label">Expiration Time</span>
+            <span class="console-marketplace-spec-value" id="panstar2-date">2026-04-18 10:00:00</span>
+          </div>
+          <div class="console-marketplace-spec-row">
+            <span class="console-marketplace-spec-label">Network</span>
+            <span class="console-marketplace-spec-value">500 Mbps | <span class="underline">450GB</span> / 500GB</span>
+          </div>
+        </article>
+
+        <article data-marketplace-listing-card="1" id="panstar-card-3">
+          <div class="console-marketplace-title">
+            <span>SG-Singapore Direct Route</span>
+            <span class="console-marketplace-price">$16.00</span>
+          </div>
+          <div class="console-marketplace-status-chip">IP normal</div>
+          <div class="console-marketplace-spec-row">
+            <span class="console-marketplace-spec-label">Renewal Price</span>
+            <span class="console-marketplace-spec-value">$20.00 / Month</span>
+          </div>
+          <div class="console-marketplace-spec-row">
+            <span class="console-marketplace-spec-label">Expiration Time</span>
+            <span class="console-marketplace-spec-value" id="panstar3-date">2026-05-01 00:00:00</span>
+          </div>
+          <div class="console-marketplace-spec-row">
+            <span class="console-marketplace-spec-label">Network</span>
+            <span class="console-marketplace-spec-value">1 Gbps | <span class="underline">80GB</span> / 1000GB</span>
+          </div>
+        </article>
+
+        <article data-marketplace-listing-card="1" id="panstar-card-4">
+          <div class="console-marketplace-title">
+            <span>UK-London Rare Annual (👑 $2/mo)</span>
+            <span class="console-marketplace-price">$45.00</span>
+          </div>
+          <div class="console-marketplace-status-chip">IP normal</div>
+          <div class="console-marketplace-spec-row">
+            <span class="console-marketplace-spec-label">Renewal Price</span>
+            <span class="console-marketplace-spec-value">$24.00 / Year</span>
+          </div>
+          <div class="console-marketplace-spec-row">
+            <span class="console-marketplace-spec-label">Expiration Time</span>
+            <span class="console-marketplace-spec-value" id="panstar4-date">2026-10-01 00:00:00</span>
+          </div>
+          <div class="console-marketplace-spec-row">
+            <span class="console-marketplace-spec-label">Network</span>
+            <span class="console-marketplace-spec-value">1 Gbps | Unlimited</span>
+          </div>
+        </article>
+
+        <article data-marketplace-listing-card="1" id="panstar-card-5">
+          <div class="console-marketplace-title">
+            <span>KR-Seoul Flash Sale (🔥 80% Off)</span>
+            <span class="console-marketplace-price">$6.00</span>
+          </div>
+          <div class="console-marketplace-status-chip">IP normal</div>
+          <div class="console-marketplace-spec-row">
+            <span class="console-marketplace-spec-label">Renewal Price</span>
+            <span class="console-marketplace-spec-value">$30.00 / Month</span>
+          </div>
+          <div class="console-marketplace-spec-row">
+            <span class="console-marketplace-spec-label">Expiration Time</span>
+            <span class="console-marketplace-spec-value" id="panstar5-date">2026-05-01 00:00:00</span>
+          </div>
+          <div class="console-marketplace-spec-row">
+            <span class="console-marketplace-spec-label">Network</span>
+            <span class="console-marketplace-spec-value">1 Gbps | <span class="underline">50GB</span> / 1000GB</span>
+          </div>
+        </article>
+
+        <article data-marketplace-listing-card="1" id="panstar-card-6">
+          <div class="console-marketplace-title">
+            <span>DE-Frankfurt Traffic Monster (📶 Most Traffic)</span>
+            <span class="console-marketplace-price">$22.00</span>
+          </div>
+          <div class="console-marketplace-status-chip">IP normal</div>
+          <div class="console-marketplace-spec-row">
+            <span class="console-marketplace-spec-label">Renewal Price</span>
+            <span class="console-marketplace-spec-value">$25.00 / Month</span>
+          </div>
+          <div class="console-marketplace-spec-row">
+            <span class="console-marketplace-spec-label">Expiration Time</span>
+            <span class="console-marketplace-spec-value" id="panstar6-date">2026-04-25 00:00:00</span>
+          </div>
+          <div class="console-marketplace-spec-row">
+            <span class="console-marketplace-spec-label">Network</span>
+            <span class="console-marketplace-spec-value">10 Gbps | <span class="underline">1GB</span> / 5000GB</span>
+          </div>
+        </article>
+
+        <article data-marketplace-listing-card="1" id="panstar-card-7">
+          <div class="console-marketplace-title">
+            <span>HK-Hong Kong Expired (Border)</span>
+            <span class="console-marketplace-price">$2.00</span>
+          </div>
+          <div class="console-marketplace-status-chip">IP normal</div>
+          <div class="console-marketplace-spec-row">
+            <span class="console-marketplace-spec-label">Renewal Price</span>
+            <span class="console-marketplace-spec-value">$10.00 / Month</span>
+          </div>
+          <div class="console-marketplace-spec-row">
+            <span class="console-marketplace-spec-label">Expiration Time</span>
+            <span class="console-marketplace-spec-value" id="panstar7-date">2026-03-01 00:00:00</span>
+          </div>
+          <div class="console-marketplace-spec-row">
+            <span class="console-marketplace-spec-label">Network</span>
+            <span class="console-marketplace-spec-value">500 Mbps | <span class="underline">100GB</span> / 500GB</span>
+          </div>
+        </article>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 自动化验收测试结果浮层 -->
+  <div id="qa-modal">
+    <div class="qa-card">
+      <div class="qa-header">
+        <h2><span>🧪 自动化验收与排序生效性测试报告</span></h2>
+        <button type="button" class="qa-close" onclick="document.getElementById('qa-modal').style.display='none'">✕</button>
+      </div>
+      <div class="qa-summary-bar">
+        <span class="qa-pill qa-pill-total" id="qa-stat-total">总用例: 0</span>
+        <span class="qa-pill qa-pill-pass" id="qa-stat-pass">通过: 0</span>
+        <span class="qa-pill qa-pill-fail" id="qa-stat-fail">失败: 0</span>
+      </div>
+      <div class="qa-list" id="qa-results-list"></div>
+      <div style="text-align: right;">
+        <button type="button" class="demo-btn" onclick="runInBrowserTests()">🔄 重新执行测试</button>
+        <button type="button" class="demo-btn" style="background:#2563eb;" onclick="document.getElementById('qa-modal').style.display='none'">完成</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 动态生成动态日期，保证测试永远有效
+    const now = Date.now();
+    const d = (days) => new Date(now + days * 86400000).toISOString().replace('T', ' ').substring(0, 19);
+    
+    // Akile 动态日期赋值
+    document.getElementById('card1-date').textContent = d(90);  // 多周期预付 90 天
+    document.getElementById('card2-date').textContent = d(18);
+    document.getElementById('card3-date').textContent = d(25);
+    document.getElementById('card4-date').textContent = d(8);
+    document.getElementById('card5-date').textContent = d(280); // 年付
+    document.getElementById('card6-date').textContent = d(30);  // 80% 折扣神机
+    document.getElementById('card7-date').textContent = d(150); // 年付传家宝
+    document.getElementById('card8-date').textContent = d(330); // 特价年付倒贴
+    document.getElementById('card9-date').textContent = d(-2);  // 已过期
+    document.getElementById('card10-date').textContent = d(20); // 流量第一
+
+    // Panstar 动态日期赋值
+    document.getElementById('panstar1-date').textContent = d(35);
+    document.getElementById('panstar2-date').textContent = d(12);
+    document.getElementById('panstar3-date').textContent = d(28);
+    document.getElementById('panstar4-date').textContent = d(180); // 年付
+    document.getElementById('panstar5-date').textContent = d(30);  // 80% 折扣
+    document.getElementById('panstar6-date').textContent = d(25);  // 流量第一
+    document.getElementById('panstar7-date').textContent = d(-2);  // 已过期
+
+    function switchSite(site) {
+      const url = new URL(location.href);
+      url.searchParams.set('site', site);
+      history.replaceState(null, '', url);
+      document.getElementById('view-akile').style.display = site === 'akile' ? 'block' : 'none';
+      document.getElementById('view-panstar').style.display = site === 'panstar' ? 'block' : 'none';
+      document.getElementById('btn-akile').classList.toggle('active', site === 'akile');
+      document.getElementById('btn-panstar').classList.toggle('active', site === 'panstar');
+      window.dispatchEvent(new Event('xrv-locationchange'));
+    }
+
+    const params = new URLSearchParams(location.search);
+    if (params.get('site') === 'panstar') {
+      switchSite('panstar');
+    }
+
+    function testAsyncAdd() {
+      const row = document.getElementById('akile-row');
+      const skeletonCol = document.createElement('div');
+      skeletonCol.className = 'arco-col';
+      skeletonCol.innerHTML = `
+        <div class="server-manage-card" style="opacity: 0.6;">
+          <div class="server-title"><span>⏳ 异步加载中机器...</span><span class="shop-server-price">--</span></div>
+          <div class="server-detail">检测中...</div>
+          <div class="server-info"><span class="info-name">续费价格</span><span class="info-value">加载中...</span></div>
+          <div class="server-info"><span class="info-name">到期时间</span><span class="info-value">加载中...</span></div>
+        </div>
+      `;
+      const loadMore = row.querySelector('.load-more');
+      row.insertBefore(skeletonCol, loadMore);
+
+      setTimeout(() => {
+        skeletonCol.innerHTML = `
+          <div class="server-manage-card">
+            <div class="server-title">
+              <span>🎉 异步返回：KR.Seoul 爆款捡漏</span>
+              <span class="shop-server-price">¥18.00</span>
+            </div>
+            <div class="server-detail">IP正常 | 延迟 22ms</div>
+            <div class="server-info">
+              <span class="info-name">续费价格</span>
+              <span class="info-value">¥36.00 / 月</span>
+            </div>
+            <div class="server-info">
+              <span class="info-name">到期时间</span>
+              <span class="info-value">${d(30)}</span>
+            </div>
+            <div class="server-info">
+              <span class="info-name">网络</span>
+              <span class="info-value">1000Mbps | <u>10GB</u> / 1000GB</span>
+            </div>
+          </div>
+        `;
+      }, 1200);
+    }
+
+    function testRouteSwitch() {
+      history.pushState({}, '', '/mock-marketplace.html?site=' + (params.get('site') === 'panstar' ? 'akile' : 'panstar'));
+      location.reload();
+    }
+
+    // ─── 浏览器端全量自动化验收与生效性测试 ───
+    function runInBrowserTests() {
+      const modal = document.getElementById('qa-modal');
+      const list = document.getElementById('qa-results-list');
+      list.innerHTML = '';
+      modal.style.display = 'flex';
+
+      const results = [];
+      function check(title, fn) {
+        try {
+          const detail = fn();
+          results.push({ title, status: 'pass', detail: detail || '通过' });
+        } catch (e) {
+          results.push({ title, status: 'fail', detail: e.message });
+        }
+      }
+
+      // 1. 检验 HUD 挂载
+      check('HUD 控制栏挂载验证', () => {
+        const hud = document.getElementById('xrv-hud');
+        if (!hud) throw new Error('未检测到 xrv-hud 控制栏');
+        return 'HUD 正常挂载在页面';
+      });
+
+      // 2. 检验天数最长已废除
+      check('废弃指标验证：彻底移除 daysDesc', () => {
+        const btn = document.querySelector('.xrv-sort-btn[data-mode="daysDesc"]');
+        if (btn) throw new Error('检测到残留的 daysDesc 按钮');
+        return '天数最长按钮已被彻底移除';
+      });
+
+      // 3. 检验新维度按钮存在
+      check('科学指标按钮验证：包含 discountRateDesc 与 monthlyRenewAsc', () => {
+        const btn1 = document.querySelector('.xrv-sort-btn[data-mode="discountRateDesc"]');
+        const btn2 = document.querySelector('.xrv-sort-btn[data-mode="monthlyRenewAsc"]');
+        if (!btn1) throw new Error('缺失 🔥 折扣最大 按钮');
+        if (!btn2) throw new Error('缺失 👑 月均续费最低 按钮');
+        return '🔥 折扣最大 与 👑 月均续费最低 按钮正常就绪';
+      });
+
+      // 4. 检验周期分类筛选器
+      check('周期分类筛选器验证：包含 all / month / year', () => {
+        const btnAll = document.querySelector('.xrv-cycle-btn[data-cycle="all"]');
+        const btnMonth = document.querySelector('.xrv-cycle-btn[data-cycle="month"]');
+        const btnYear = document.querySelector('.xrv-cycle-btn[data-cycle="year"]');
+        if (!btnAll || !btnMonth || !btnYear) throw new Error('周期筛选胶囊按钮缺失');
+        return '三段式周期分类控件就绪';
+      });
+
+      // 5. 遍历点击各排序模式并验证卡片 order 重排
+      const modes = ['discountDesc', 'discountRateDesc', 'priceAsc', 'monthlyRenewAsc', 'costDailyAsc', 'trafficDesc', 'default'];
+      const recordedOrders = {};
+
+      modes.forEach((mode) => {
+        check(`排序生效性验证：点击 [${mode}] 产生明确重排且不报错`, () => {
+          const btn = document.querySelector(`.xrv-sort-btn[data-mode="${mode}"]`);
+          if (!btn) throw new Error(`未找到排序按钮 ${mode}`);
+          btn.click();
+          // 读取当前所有卡片元素的 order
+          const cards = [...document.querySelectorAll('.server-manage-card')];
+          const orders = cards.map(c => (c.closest('.arco-col') || c).style.order || '0');
+          const orderSig = orders.join(',');
+          recordedOrders[mode] = orderSig;
+
+          // 校验置底元素
+          const loadMore = document.querySelector('.load-more');
+          if (loadMore && mode !== 'default') {
+            if (loadMore.style.order !== '999999') throw new Error('load-more 未正确定位在尾部 (HIGH=999999)');
+          }
+          return `当前卡片 Order 序列: [${orderSig}]`;
+        });
+      });
+
+      // 6. 验证模式间顺序独立性（杜绝“无变化”Bug）
+      check('杜绝无变化 Bug：全部 6 种排序必须产生各不相同的排列次序', () => {
+        const activeModes = ['discountDesc', 'discountRateDesc', 'priceAsc', 'monthlyRenewAsc', 'costDailyAsc', 'trafficDesc'];
+        const set = new Set();
+        activeModes.forEach((m) => {
+          const sig = recordedOrders[m];
+          if (set.has(sig)) throw new Error(`模式 ${m} 与其他模式排序序列完全相同，出现排序无变化 Bug`);
+          set.add(sig);
+        });
+        return `6 种排序模式均产生了互不相同的独特卡片排列序列`;
+      });
+
+      // 7. 周期分类筛选器动作验证
+      check('周期分类筛选有效性：点击 [年付 (year)] 成功仅保留年付卡片', () => {
+        const btnYear = document.querySelector('.xrv-cycle-btn[data-cycle="year"]');
+        btnYear.click();
+        const visibleCols = [...document.querySelectorAll('.arco-col:not(.load-more)')].filter(c => !c.classList.contains('xrv-filter-hidden'));
+        visibleCols.forEach((col) => {
+          const card = col.querySelector('.server-manage-card');
+          if (card.dataset.xrvCycle !== 'year') throw new Error('年付筛选下发现了非年付卡片');
+        });
+        return `年付筛选成功生效，当前显示 ${visibleCols.length} 张年付机器`;
+      });
+
+      check('周期分类筛选有效性：点击 [月付 (month)] 成功仅保留月付卡片', () => {
+        const btnMonth = document.querySelector('.xrv-cycle-btn[data-cycle="month"]');
+        btnMonth.click();
+        const visibleCols = [...document.querySelectorAll('.arco-col:not(.load-more)')].filter(c => !c.classList.contains('xrv-filter-hidden'));
+        visibleCols.forEach((col) => {
+          const card = col.querySelector('.server-manage-card');
+          if (card.dataset.xrvCycle !== 'month') throw new Error('月付筛选下发现了非月付卡片');
+        });
+        return `月付筛选成功生效，当前显示 ${visibleCols.length} 张月付机器`;
+      });
+
+      // 恢复全部
+      check('恢复全部周期：点击 [全部 (all)] 恢复显示', () => {
+        const btnAll = document.querySelector('.xrv-cycle-btn[data-cycle="all"]');
+        btnAll.click();
+        const visibleCols = [...document.querySelectorAll('.arco-col:not(.load-more)')].filter(c => !c.classList.contains('xrv-filter-hidden'));
+        if (visibleCols.length !== 10) throw new Error(`恢复全部后卡片数量不符，期望 10，实际 ${visibleCols.length}`);
+        return `已成功恢复显示全部 ${visibleCols.length} 张卡片`;
+      });
+
+      // 渲染测试结果列表
+      let passCount = 0;
+      let failCount = 0;
+      results.forEach((r) => {
+        if (r.status === 'pass') passCount++;
+        else failCount++;
+        const item = document.createElement('div');
+        item.className = `qa-item ${r.status}`;
+        item.innerHTML = `
+          <div>
+            <strong>${r.status === 'pass' ? '✅' : '❌'} ${r.title}</strong>
+            <div class="qa-item-detail">${r.detail}</div>
+          </div>
+          <span class="qa-pill ${r.status === 'pass' ? 'qa-pill-pass' : 'qa-pill-fail'}">${r.status.toUpperCase()}</span>
+        `;
+        list.appendChild(item);
+      });
+
+      document.getElementById('qa-stat-total').textContent = `总用例: ${results.length}`;
+      document.getElementById('qa-stat-pass').textContent = `通过: ${passCount}`;
+      document.getElementById('qa-stat-fail').textContent = `失败: ${failCount}`;
+    }
+  </script>
+
+  <!-- 载入核心重构脚本 -->
+  <script src="/panstar-akile-value.user.js"></script>
+</body>
+</html>
