@@ -2,7 +2,7 @@
 // @name         Panstar & Akile 交易所剩余价值计算器
 // @name:en      Panstar & Akile Marketplace Remaining-Value Calculator
 // @namespace    https://github.com/j2st1n/panstar-akile-marketplace-tool
-// @version      0.4.0
+// @version      0.4.2
 // @description  一套脚本同时适配 Panstar 与 Akile 交易所：自动计算每台机器剩余价值、日均持有成本、打折力度（折扣率）、折合月付续费成本，支持科学多维排序（倒贴最多/折扣最大/月均续费最低/日均最低/剩余流量最多）与周期分类筛选（全部/月付/年付）。
 // @description:en  One script for both Panstar and Akile marketplaces: computes remaining value, daily cost, discount rate, normalized monthly renewal cost, multi-dimensional sorting (best bonus, deepest discount, lowest monthly renewal, daily cost, traffic left) and cycle filter (all/monthly/yearly).
 // @author       j2st1n
@@ -26,11 +26,47 @@
 //  （Greasy Fork 脚本 ID: 576546）及早期作者启发。
 //  v0.3.0 ~ v0.4.0 全面重构 SPA 生命周期、科学价值模型、
 //  6 维科学排序矩阵（IP 异常惩罚沉底）与周期分类筛选体系。
+//  v0.4.1 全面重构 CSS 样式体系与 Design Tokens，支持 Arco Design 暗色模式、
+//  .dark 类、data-theme 及媒体查询，实现卡片与 HUD 全暗色双模自适应。
+//  v0.4.2 重构全卡片智能 IP 状态探测流水线（三级选择器回退+高精度正则+防误伤），
+//  强化筛选事件全覆盖监听与双重行内 style.display='none !important' 级联防御。
 //  依 MIT 许可开源发布。
 // ─────────────────────────────────────────────────────────────
 
 (function () {
   'use strict';
+
+  // ─── IP 状态判定正则与防误判清洗矩阵 ─────────────────────────────
+  const IP_PATTERNS = {
+    // 明确阻断、被墙、被封、封禁、封锁、被锁、阻断、不可达、失联、不可用、污染、GFW
+    blocked: /(?:ip|IP|网络|连接|端口)?\s*(?:被墙|被封|封禁|封锁|被锁|阻断|不可达|失联|不可用|污染)|GFW|\b(?:blocked|banned|unreachable|gfw)\b/i,
+    // 异常、暂无检测、超时、失败
+    abnormal: /\bno\s*data\b|暂无(?:数据|检测)?|检测失败|异常|超时|timeout/i,
+    // 明确正常
+    normal: /正常|normal|\bok\b|good|healthy|有效/i,
+    // 骨架屏或检测中
+    pending: /检测中|加载中|\b(?:checking|loading)\b|\.\.\./i,
+  };
+
+  function sanitizeIpStatusText(text) {
+    if (!text) return '';
+    return text
+      .replace(/防火墙/gi, '')
+      .replace(/锁价/gi, '')
+      .replace(/锁单/gi, '')
+      .replace(/不锁\S*/gi, '')
+      .replace(/未锁\S*/gi, '')
+      .replace(/(?:不|未|无)\s*(?:阻断|封锁|被墙|不可达)/gi, '');
+  }
+
+  function isIpBlockedUnified(text) {
+    if (!text) return false;
+    const sanitized = sanitizeIpStatusText(text.trim());
+    if (IP_PATTERNS.blocked.test(sanitized)) return true;
+    if (IP_PATTERNS.abnormal.test(sanitized)) return true;
+    if (IP_PATTERNS.normal.test(sanitized)) return false;
+    return false;
+  }
 
   // ═══ 站点配置层 ═══════════════════════════════════════════
   // 针对不同站点，定义各自的选择器与字段键映射。
@@ -45,8 +81,9 @@
       sortUnitOf(card) { return card; },
       // 售价元素
       priceSelector: '.console-marketplace-price',
-      // IP 状态 chip
-      statusSelector: '.console-marketplace-status-chip',
+      // IP 状态专用选择器与备用回退列表
+      statusSelector: '.console-marketplace-status-chip, .console-marketplace-status, [data-status]',
+      fallbackSelectors: ['.arco-tag', '.ant-tag', '.badge', '[class*="status"]', '[data-status]'],
       // 依字段键在卡片内取值
       findField(card, key) {
         const rows = card.querySelectorAll('.console-marketplace-spec-row');
@@ -71,7 +108,7 @@
       },
       // 根据 IP 状态文本判定是否被墙
       isIpBlocked(text) {
-        return /被墙|blocked|墙/i.test(text) || !/normal|正常|ok/i.test(text);
+        return isIpBlockedUnified(text);
       },
       // 流量文本：提取整个网络字段文本并过滤掉脚本已注入的进度条
       networkUsage(valueEl) {
@@ -92,7 +129,8 @@
         return card.closest('.arco-col') || card.parentElement;
       },
       priceSelector: '.shop-server-price',
-      statusSelector: '.server-detail',
+      statusSelector: '.server-detail, .server-status, .server-tag',
+      fallbackSelectors: ['.arco-tag', '.ant-tag', '.badge', '[class*="status"]', '[class*="detail"]'],
       findField(card, key) {
         const labelMap = {
           renewal: '续费价格',
@@ -113,10 +151,7 @@
         return detail ? detail.textContent : '';
       },
       isIpBlocked(text) {
-        // 明确“正常”才算正常，其余（被墙 / 被锁 / 锁 / 墙 / 暂无检测等）都视为异常
-        if (!text) return true;
-        if (/被墙|被锁|墙|锁|blocked|\bno\s*data\b|暂无|异常|失败/i.test(text)) return true;
-        return !/正常|normal|\bok\b/i.test(text);
+        return isIpBlockedUnified(text);
       },
       // 流量文本：提取整个网络字段文本并过滤掉脚本已注入的进度条
       networkUsage(valueEl) {
@@ -180,12 +215,234 @@
     const style = document.createElement('style');
     style.id = 'xrv-styles';
     style.textContent = `
+      /* ─── XR-Value Design Tokens (明暗双模自适应体系) ─── */
+      :root {
+        /* HUD 控制面板容器 */
+        --xrv-bg-hud: #ffffff;
+        --xrv-border-hud: #e2e8f0;
+        --xrv-shadow-hud: 0 2px 10px rgba(0, 0, 0, 0.04);
+        --xrv-divider: #e2e8f0;
+        --xrv-header-border: #f1f5f9;
+
+        /* 文本与排版 Tokens */
+        --xrv-text-main: #1e293b;
+        --xrv-text-sub: #64748b;
+        --xrv-text-muted: #94a3b8;
+        --xrv-text-green: #16a34a;
+        --xrv-text-red: #dc2626;
+        --xrv-text-gold: #d97706;
+
+        /* 交互控件 Tokens (排序按钮、分段控制器、复选框) */
+        --xrv-btn-bg: #f8fafc;
+        --xrv-btn-border: #e2e8f0;
+        --xrv-btn-text: #475569;
+        --xrv-btn-bg-hover: #f1f5f9;
+        --xrv-btn-border-hover: #cbd5e1;
+        --xrv-btn-text-hover: #1e293b;
+        --xrv-btn-active-bg: #2563eb;
+        --xrv-btn-active-border: #2563eb;
+        --xrv-btn-active-text: #ffffff;
+        --xrv-btn-active-shadow: 0 1px 4px rgba(37, 99, 235, 0.35);
+
+        --xrv-cycle-bg: #f1f5f9;
+        --xrv-cycle-border: #e2e8f0;
+        --xrv-cycle-btn-active-bg: #ffffff;
+        --xrv-cycle-btn-active-text: #2563eb;
+        --xrv-cycle-btn-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+        /* 版本徽章 Tokens */
+        --xrv-ver-bg: #eff6ff;
+        --xrv-ver-border: #bfdbfe;
+        --xrv-ver-text: #2563eb;
+
+        /* 卡片内嵌组件 Tokens */
+        --xrv-card-border-dashed: #e2e8f0;
+        --xrv-track-bg: #e2e8f0;
+        --xrv-blocked-border: #fca5a5;
+        --xrv-blocked-shadow: 0 0 0 1px rgba(239, 68, 68, 0.5), 0 0 16px rgba(239, 68, 68, 0.16);
+
+        /* 5 级折溢价徽章 (Light) */
+        --xrv-badge-super-bg: #dcfce7;
+        --xrv-badge-super-text: #15803d;
+        --xrv-badge-super-border: #86efac;
+
+        --xrv-badge-disc-bg: #f0fdf4;
+        --xrv-badge-disc-text: #166534;
+        --xrv-badge-disc-border: #bbf7d0;
+
+        --xrv-badge-fair-bg: #f1f5f9;
+        --xrv-badge-fair-text: #475569;
+        --xrv-badge-fair-border: #cbd5e1;
+
+        --xrv-badge-prem-bg: #fef3c7;
+        --xrv-badge-prem-text: #92400e;
+        --xrv-badge-prem-border: #fde68a;
+
+        --xrv-badge-high-bg: #fee2e2;
+        --xrv-badge-high-text: #991b1b;
+        --xrv-badge-high-border: #fecaca;
+
+        --xrv-badge-exp-bg: #f3f4f6;
+        --xrv-badge-exp-text: #9ca3af;
+        --xrv-badge-exp-border: #e5e7eb;
+      }
+
+      /* 显式暗色触发选择器 (Arco 标准属性、通用暗色类名、属性以及 Panstar 平台) */
+      :root[arco-theme="dark"],
+      body[arco-theme="dark"],
+      [arco-theme="dark"],
+      html.dark,
+      body.dark,
+      .dark,
+      :root[data-theme="dark"],
+      body[data-theme="dark"],
+      [data-theme="dark"],
+      html.xrv-panstar {
+        /* HUD 控制面板容器 */
+        --xrv-bg-hud: #1e293b;
+        --xrv-border-hud: #334155;
+        --xrv-shadow-hud: 0 4px 16px rgba(0, 0, 0, 0.35);
+        --xrv-divider: #334155;
+        --xrv-header-border: #334155;
+
+        /* 文本与排版 Tokens */
+        --xrv-text-main: #f8fafc;
+        --xrv-text-sub: #94a3b8;
+        --xrv-text-muted: #64748b;
+        --xrv-text-green: #4ade80;
+        --xrv-text-red: #f87171;
+        --xrv-text-gold: #fbbf24;
+
+        /* 交互控件 Tokens (排序按钮、分段控制器、复选框) */
+        --xrv-btn-bg: #0f172a;
+        --xrv-btn-border: #475569;
+        --xrv-btn-text: #cbd5e1;
+        --xrv-btn-bg-hover: #334155;
+        --xrv-btn-border-hover: #64748b;
+        --xrv-btn-text-hover: #ffffff;
+        --xrv-btn-active-bg: #3b82f6;
+        --xrv-btn-active-border: #3b82f6;
+        --xrv-btn-active-text: #ffffff;
+        --xrv-btn-active-shadow: 0 1px 6px rgba(59, 130, 246, 0.45);
+
+        --xrv-cycle-bg: #0f172a;
+        --xrv-cycle-border: #334155;
+        --xrv-cycle-btn-active-bg: #1e293b;
+        --xrv-cycle-btn-active-text: #60a5fa;
+        --xrv-cycle-btn-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+
+        /* 版本徽章 Tokens */
+        --xrv-ver-bg: rgba(30, 58, 138, 0.5);
+        --xrv-ver-border: #1d4ed8;
+        --xrv-ver-text: #93c5fd;
+
+        /* 卡片内嵌组件 Tokens */
+        --xrv-card-border-dashed: #334155;
+        --xrv-track-bg: #334155;
+        --xrv-blocked-border: #ef4444;
+        --xrv-blocked-shadow: 0 0 0 1px rgba(239, 68, 68, 0.65), 0 0 20px rgba(239, 68, 68, 0.3);
+
+        /* 5 级折溢价徽章 (Dark: 半透明深底 + 高对比度前景色，杜绝刺目过曝) */
+        --xrv-badge-super-bg: rgba(22, 101, 52, 0.35);
+        --xrv-badge-super-text: #4ade80;
+        --xrv-badge-super-border: rgba(74, 222, 128, 0.35);
+
+        --xrv-badge-disc-bg: rgba(20, 83, 45, 0.3);
+        --xrv-badge-disc-text: #86efac;
+        --xrv-badge-disc-border: rgba(134, 239, 172, 0.3);
+
+        --xrv-badge-fair-bg: rgba(51, 65, 85, 0.5);
+        --xrv-badge-fair-text: #cbd5e1;
+        --xrv-badge-fair-border: rgba(100, 116, 139, 0.5);
+
+        --xrv-badge-prem-bg: rgba(146, 64, 14, 0.35);
+        --xrv-badge-prem-text: #fcd34d;
+        --xrv-badge-prem-border: rgba(252, 211, 77, 0.35);
+
+        --xrv-badge-high-bg: rgba(153, 27, 27, 0.35);
+        --xrv-badge-high-text: #f87171;
+        --xrv-badge-high-border: rgba(248, 113, 113, 0.35);
+
+        --xrv-badge-exp-bg: rgba(75, 85, 99, 0.4);
+        --xrv-badge-exp-text: #9ca3af;
+        --xrv-badge-exp-border: rgba(107, 114, 128, 0.4);
+      }
+
+      /* 系统级深色模式与明色守卫 */
+      @media (prefers-color-scheme: dark) {
+        :root:not([arco-theme="light"]):not([data-theme="light"]):not(.light) {
+          --xrv-bg-hud: #1e293b;
+          --xrv-border-hud: #334155;
+          --xrv-shadow-hud: 0 4px 16px rgba(0, 0, 0, 0.35);
+          --xrv-divider: #334155;
+          --xrv-header-border: #334155;
+
+          --xrv-text-main: #f8fafc;
+          --xrv-text-sub: #94a3b8;
+          --xrv-text-muted: #64748b;
+          --xrv-text-green: #4ade80;
+          --xrv-text-red: #f87171;
+          --xrv-text-gold: #fbbf24;
+
+          --xrv-btn-bg: #0f172a;
+          --xrv-btn-border: #475569;
+          --xrv-btn-text: #cbd5e1;
+          --xrv-btn-bg-hover: #334155;
+          --xrv-btn-border-hover: #64748b;
+          --xrv-btn-text-hover: #ffffff;
+          --xrv-btn-active-bg: #3b82f6;
+          --xrv-btn-active-border: #3b82f6;
+          --xrv-btn-active-text: #ffffff;
+          --xrv-btn-active-shadow: 0 1px 6px rgba(59, 130, 246, 0.45);
+
+          --xrv-cycle-bg: #0f172a;
+          --xrv-cycle-border: #334155;
+          --xrv-cycle-btn-active-bg: #1e293b;
+          --xrv-cycle-btn-active-text: #60a5fa;
+          --xrv-cycle-btn-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+
+          --xrv-ver-bg: rgba(30, 58, 138, 0.5);
+          --xrv-ver-border: #1d4ed8;
+          --xrv-ver-text: #93c5fd;
+
+          --xrv-card-border-dashed: #334155;
+          --xrv-track-bg: #334155;
+          --xrv-blocked-border: #ef4444;
+          --xrv-blocked-shadow: 0 0 0 1px rgba(239, 68, 68, 0.65), 0 0 20px rgba(239, 68, 68, 0.3);
+
+          --xrv-badge-super-bg: rgba(22, 101, 52, 0.35);
+          --xrv-badge-super-text: #4ade80;
+          --xrv-badge-super-border: rgba(74, 222, 128, 0.35);
+
+          --xrv-badge-disc-bg: rgba(20, 83, 45, 0.3);
+          --xrv-badge-disc-text: #86efac;
+          --xrv-badge-disc-border: rgba(134, 239, 172, 0.3);
+
+          --xrv-badge-fair-bg: rgba(51, 65, 85, 0.5);
+          --xrv-badge-fair-text: #cbd5e1;
+          --xrv-badge-fair-border: rgba(100, 116, 139, 0.5);
+
+          --xrv-badge-prem-bg: rgba(146, 64, 14, 0.35);
+          --xrv-badge-prem-text: #fcd34d;
+          --xrv-badge-prem-border: rgba(252, 211, 77, 0.35);
+
+          --xrv-badge-high-bg: rgba(153, 27, 27, 0.35);
+          --xrv-badge-high-text: #f87171;
+          --xrv-badge-high-border: rgba(248, 113, 113, 0.35);
+
+          --xrv-badge-exp-bg: rgba(75, 85, 99, 0.4);
+          --xrv-badge-exp-text: #9ca3af;
+          --xrv-badge-exp-border: rgba(107, 114, 128, 0.4);
+        }
+      }
+
+      /* ─── 组件样式规则 ─── */
       /* IP 状态着色与卡片警示 */
-      .xrv-ip-ok  { color: #16a34a !important; font-weight: 700 !important; }
-      .xrv-ip-ban { color: #dc2626 !important; font-weight: 700 !important; }
+      .xrv-ip-ok  { color: var(--xrv-text-green) !important; font-weight: 700 !important; }
+      .xrv-ip-ban { color: var(--xrv-text-red) !important; font-weight: 700 !important; }
       .xrv-card-blocked {
-        box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.5), 0 0 16px rgba(239, 68, 68, 0.16) !important;
-        border-color: #fca5a5 !important;
+        box-shadow: var(--xrv-blocked-shadow) !important;
+        border-color: var(--xrv-blocked-border) !important;
       }
 
       /* 剩余价值行 */
@@ -194,7 +451,7 @@
         flex-direction: column;
         gap: 4px;
         padding: 6px 0 2px;
-        border-top: 1px dashed #e2e8f0;
+        border-top: 1px dashed var(--xrv-card-border-dashed);
         margin-top: 6px;
         width: 100%;
         max-width: 100%;
@@ -206,7 +463,7 @@
         width: auto;
         min-width: 0;
       }
-      .xrv-label { font-size: 11px; color: #64748b; font-weight: 500; }
+      .xrv-label { font-size: 11px; color: var(--xrv-text-sub); font-weight: 500; }
       
       /* 现代化价值徽章体系 */
       .xrv-badge {
@@ -222,22 +479,46 @@
         width: fit-content;
         border: 1px solid transparent;
       }
-      .xrv-badge-super-discount { background: #dcfce7; color: #15803d; border-color: #86efac; }
-      .xrv-badge-discount       { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
-      .xrv-badge-fair           { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
-      .xrv-badge-premium        { background: #fef3c7; color: #92400e; border-color: #fde68a; }
-      .xrv-badge-high-premium   { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
-      .xrv-badge-expired        { background: #f3f4f6; color: #9ca3af; border-color: #e5e7eb; }
+      .xrv-badge-super-discount {
+        background: var(--xrv-badge-super-bg);
+        color: var(--xrv-badge-super-text);
+        border-color: var(--xrv-badge-super-border);
+      }
+      .xrv-badge-discount {
+        background: var(--xrv-badge-disc-bg);
+        color: var(--xrv-badge-disc-text);
+        border-color: var(--xrv-badge-disc-border);
+      }
+      .xrv-badge-fair {
+        background: var(--xrv-badge-fair-bg);
+        color: var(--xrv-badge-fair-text);
+        border-color: var(--xrv-badge-fair-border);
+      }
+      .xrv-badge-premium {
+        background: var(--xrv-badge-prem-bg);
+        color: var(--xrv-badge-prem-text);
+        border-color: var(--xrv-badge-prem-border);
+      }
+      .xrv-badge-high-premium {
+        background: var(--xrv-badge-high-bg);
+        color: var(--xrv-badge-high-text);
+        border-color: var(--xrv-badge-high-border);
+      }
+      .xrv-badge-expired {
+        background: var(--xrv-badge-exp-bg);
+        color: var(--xrv-badge-exp-text);
+        border-color: var(--xrv-badge-exp-border);
+      }
 
       .xrv-bar {
         width: 100%;
         height: 4px;
-        background: #e2e8f0;
+        background: var(--xrv-track-bg);
         border-radius: 2px;
         overflow: hidden;
       }
       .xrv-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
-      .xrv-sub { font-size: 11px; color: #94a3b8; line-height: 1.4; }
+      .xrv-sub { font-size: 11px; color: var(--xrv-text-muted); line-height: 1.4; }
 
       /* 流量存量条 */
       .xrv-traffic {
@@ -255,13 +536,13 @@
         justify-content: space-between;
         gap: 8px;
         font-size: 11px;
-        color: #64748b;
+        color: var(--xrv-text-sub);
       }
       .xrv-traffic-percent { font-weight: 700; white-space: nowrap; }
       .xrv-traffic-track {
         width: 100%;
         height: 6px;
-        background: #e2e8f0;
+        background: var(--xrv-track-bg);
         border-radius: 999px;
         overflow: hidden;
       }
@@ -277,20 +558,14 @@
         gap: 8px;
         padding: 10px 14px;
         margin-bottom: 14px;
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
+        background: var(--xrv-bg-hud);
+        border: 1px solid var(--xrv-border-hud);
         border-radius: 10px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+        box-shadow: var(--xrv-shadow-hud);
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-        color: #1e293b;
+        color: var(--xrv-text-main);
         box-sizing: border-box;
         width: 100%;
-      }
-      html.xrv-panstar .xrv-hud {
-        background: #1e293b;
-        border-color: #334155;
-        color: #f1f5f9;
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
       }
 
       .xrv-hud-header {
@@ -299,11 +574,8 @@
         justify-content: space-between;
         flex-wrap: wrap;
         gap: 8px;
-        border-bottom: 1px solid #f1f5f9;
+        border-bottom: 1px solid var(--xrv-header-border);
         padding-bottom: 8px;
-      }
-      html.xrv-panstar .xrv-hud-header {
-        border-bottom-color: #334155;
       }
 
       .xrv-hud-brand {
@@ -318,32 +590,25 @@
         font-size: 13px;
         font-weight: 700;
         letter-spacing: 0.2px;
+        color: var(--xrv-text-main);
       }
       .xrv-hud-ver {
         font-size: 10px;
         font-weight: 600;
         padding: 1px 5px;
         border-radius: 4px;
-        background: #eff6ff;
-        color: #2563eb;
-        border: 1px solid #bfdbfe;
-      }
-      html.xrv-panstar .xrv-hud-ver {
-        background: #1e3a8a;
-        color: #93c5fd;
-        border-color: #1d4ed8;
+        background: var(--xrv-ver-bg);
+        color: var(--xrv-ver-text);
+        border: 1px solid var(--xrv-ver-border);
       }
 
       .xrv-hud-stats {
         font-size: 12px;
-        color: #64748b;
+        color: var(--xrv-text-sub);
       }
-      html.xrv-panstar .xrv-hud-stats {
-        color: #94a3b8;
-      }
-      .xrv-text-green { color: #16a34a !important; font-weight: 600; }
-      .xrv-text-red { color: #dc2626 !important; font-weight: 600; }
-      .xrv-text-gold { color: #d97706 !important; font-weight: 600; }
+      .xrv-text-green { color: var(--xrv-text-green) !important; font-weight: 600; }
+      .xrv-text-red { color: var(--xrv-text-red) !important; font-weight: 600; }
+      .xrv-text-gold { color: var(--xrv-text-gold) !important; font-weight: 600; }
 
       .xrv-hud-body {
         display: flex;
@@ -360,11 +625,8 @@
       .xrv-section-label {
         font-size: 12px;
         font-weight: 600;
-        color: #64748b;
+        color: var(--xrv-text-sub);
         margin-right: 2px;
-      }
-      html.xrv-panstar .xrv-section-label {
-        color: #94a3b8;
       }
 
       .xrv-sort-group {
@@ -375,9 +637,9 @@
       }
 
       .xrv-sort-btn {
-        border: 1px solid #e2e8f0;
-        background: #f8fafc;
-        color: #475569;
+        border: 1px solid var(--xrv-btn-border);
+        background: var(--xrv-btn-bg);
+        color: var(--xrv-btn-text);
         padding: 4px 10px;
         border-radius: 6px;
         font-size: 12px;
@@ -390,58 +652,38 @@
         user-select: none;
       }
       .xrv-sort-btn:hover {
-        border-color: #cbd5e1;
-        background: #f1f5f9;
+        border-color: var(--xrv-btn-border-hover);
+        background: var(--xrv-btn-bg-hover);
+        color: var(--xrv-btn-text-hover);
       }
       .xrv-sort-btn[data-active="1"] {
-        background: #2563eb !important;
-        border-color: #2563eb !important;
-        color: #ffffff !important;
+        background: var(--xrv-btn-active-bg) !important;
+        border-color: var(--xrv-btn-active-border) !important;
+        color: var(--xrv-btn-active-text) !important;
         font-weight: 600;
-        box-shadow: 0 1px 4px rgba(37, 99, 235, 0.35);
-      }
-      html.xrv-panstar .xrv-sort-btn {
-        background: #0f172a;
-        border-color: #475569;
-        color: #cbd5e1;
-      }
-      html.xrv-panstar .xrv-sort-btn:hover {
-        background: #334155;
-        color: #ffffff;
-      }
-      html.xrv-panstar .xrv-sort-btn[data-active="1"] {
-        background: #3b82f6 !important;
-        border-color: #3b82f6 !important;
-        color: #ffffff !important;
+        box-shadow: var(--xrv-btn-active-shadow);
       }
 
       .xrv-hud-divider {
         width: 1px;
         height: 20px;
-        background: #e2e8f0;
-      }
-      html.xrv-panstar .xrv-hud-divider {
-        background: #334155;
+        background: var(--xrv-divider);
       }
 
       /* 周期分类筛选按钮组 (Segmented Control) */
       .xrv-cycle-group {
         display: inline-flex;
         align-items: center;
-        background: #f1f5f9;
+        background: var(--xrv-cycle-bg);
         border-radius: 6px;
         padding: 2px;
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--xrv-cycle-border);
         gap: 2px;
-      }
-      html.xrv-panstar .xrv-cycle-group {
-        background: #0f172a;
-        border-color: #475569;
       }
       .xrv-cycle-btn {
         border: none;
         background: transparent;
-        color: #64748b;
+        color: var(--xrv-btn-text);
         padding: 3px 8px;
         border-radius: 4px;
         font-size: 12px;
@@ -453,24 +695,13 @@
         align-items: center;
       }
       .xrv-cycle-btn:hover {
-        color: #1e293b;
+        color: var(--xrv-btn-text-hover);
       }
       .xrv-cycle-btn.active {
-        background: #ffffff;
-        color: #2563eb;
+        background: var(--xrv-cycle-btn-active-bg);
+        color: var(--xrv-cycle-btn-active-text);
         font-weight: 600;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-      }
-      html.xrv-panstar .xrv-cycle-btn {
-        color: #94a3b8;
-      }
-      html.xrv-panstar .xrv-cycle-btn:hover {
-        color: #f8fafc;
-      }
-      html.xrv-panstar .xrv-cycle-btn.active {
-        background: #1e293b;
-        color: #60a5fa;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+        box-shadow: var(--xrv-cycle-btn-shadow);
       }
 
       .xrv-filter-checkbox {
@@ -483,32 +714,26 @@
         user-select: none;
         padding: 3px 8px;
         border-radius: 6px;
-        border: 1px solid #e2e8f0;
-        background: #f8fafc;
-        color: #475569;
+        border: 1px solid var(--xrv-btn-border);
+        background: var(--xrv-btn-bg);
+        color: var(--xrv-btn-text);
         transition: all 0.15s ease;
       }
       .xrv-filter-checkbox:hover {
-        border-color: #cbd5e1;
-        background: #f1f5f9;
+        border-color: var(--xrv-btn-border-hover);
+        background: var(--xrv-btn-bg-hover);
+        color: var(--xrv-btn-text-hover);
       }
       .xrv-filter-checkbox input[type="checkbox"] {
         cursor: pointer;
-        accent-color: #2563eb;
+        accent-color: var(--xrv-btn-active-bg);
         margin: 0;
       }
-      html.xrv-panstar .xrv-filter-checkbox {
-        background: #0f172a;
-        border-color: #475569;
-        color: #cbd5e1;
-      }
-      html.xrv-panstar .xrv-filter-checkbox:hover {
-        background: #334155;
-        color: #ffffff;
-      }
 
-      /* 过滤隐藏类 */
-      .xrv-filter-hidden {
+      /* 过滤隐藏类：强化特异性防守，消除宿主栅格与 flex/grid 覆盖 */
+      .xrv-filter-hidden,
+      .arco-row .arco-col.xrv-filter-hidden,
+      article[data-marketplace-listing-card].xrv-filter-hidden {
         display: none !important;
       }
     `;
@@ -738,26 +963,127 @@
     return parseMoney(card.querySelector(SITE.priceSelector)?.textContent);
   }
 
-  function injectIpStatus(card) {
-    const el = card.querySelector(SITE.statusSelector);
-    if (!el) return;
-    const text = SITE.ipText(el).trim();
-    // 骨架屏检测：若文本为空，跳过打标等待后续真实文本更新
-    if (!text) return;
+  // ─── IP 状态多层级探测流水线 (Zero Silent Failure Pipeline) ───────
+  function extractCardIpStatus(card) {
+    if (!card) return { blocked: false, text: '', el: null, isPending: false, level: 0 };
 
-    const blocked = SITE.isIpBlocked(text);
+    // Level 1: 专用状态选择器匹配 (Dedicated Selector)
+    const primarySelector = SITE.statusSelector;
+    const primaryEl = primarySelector ? card.querySelector(primarySelector) : null;
+    if (primaryEl) {
+      const rawText = SITE.ipText ? SITE.ipText(primaryEl) : (primaryEl.textContent || '');
+      const cleanText = rawText.trim();
+      if (cleanText) {
+        const sanitized = sanitizeIpStatusText(cleanText);
+        if (IP_PATTERNS.blocked.test(sanitized) || IP_PATTERNS.abnormal.test(sanitized)) {
+          return { blocked: true, text: cleanText, el: primaryEl, isPending: false, level: 1 };
+        }
+        if (IP_PATTERNS.normal.test(sanitized)) {
+          return { blocked: false, text: cleanText, el: primaryEl, isPending: false, level: 1 };
+        }
+        if (IP_PATTERNS.pending.test(sanitized)) {
+          return { blocked: false, text: cleanText, el: primaryEl, isPending: true, level: 1 };
+        }
+      }
+    }
+
+    // Level 2: 结构化备用选择器回退 (Structured Candidates)
+    const secondarySelectors = [
+      '.console-marketplace-status-chip',
+      '.console-marketplace-status',
+      '.server-detail',
+      '.server-status',
+      '.server-tag',
+      '.arco-tag',
+      '.ant-tag',
+      '.badge',
+      '[class*="status"]',
+      '[data-status]',
+    ];
+    for (const sel of secondarySelectors) {
+      const candEls = card.querySelectorAll(sel);
+      for (const candEl of candEls) {
+        if (candEl === primaryEl) continue;
+        const cleanText = (candEl.textContent || '').trim();
+        if (!cleanText) continue;
+        const sanitized = sanitizeIpStatusText(cleanText);
+        if (IP_PATTERNS.blocked.test(sanitized) || IP_PATTERNS.abnormal.test(sanitized)) {
+          return { blocked: true, text: cleanText, el: candEl, isPending: false, level: 2 };
+        }
+        if (IP_PATTERNS.normal.test(sanitized)) {
+          return { blocked: false, text: cleanText, el: candEl, isPending: false, level: 2 };
+        }
+      }
+    }
+
+    // Level 2 延伸：规格行匹配 (Spec rows)
+    const infoRows = card.querySelectorAll('.server-info, .console-marketplace-spec-row');
+    for (const row of infoRows) {
+      const labelEl = row.querySelector('.info-name, .console-marketplace-spec-label');
+      const valEl = row.querySelector('.info-value, .console-marketplace-spec-value');
+      if (labelEl && valEl) {
+        const labelText = (labelEl.textContent || '').trim();
+        if (/IP|状态|网络|Network|Status/i.test(labelText)) {
+          const cleanVal = (valEl.textContent || '').trim();
+          if (cleanVal) {
+            const sanitized = sanitizeIpStatusText(cleanVal);
+            if (IP_PATTERNS.blocked.test(sanitized) || IP_PATTERNS.abnormal.test(sanitized)) {
+              return { blocked: true, text: cleanVal, el: valEl, isPending: false, level: 2 };
+            }
+            if (IP_PATTERNS.normal.test(sanitized)) {
+              return { blocked: false, text: cleanVal, el: valEl, isPending: false, level: 2 };
+            }
+          }
+        }
+      }
+    }
+
+    // Level 3: 全卡片高置信度智能文本扫描 (Full-Card Fallback Scan)
+    const cleanFull = (card.textContent || '').trim();
+    if (cleanFull) {
+      const sanitizedFull = sanitizeIpStatusText(cleanFull);
+      if (IP_PATTERNS.blocked.test(sanitizedFull) || IP_PATTERNS.abnormal.test(sanitizedFull)) {
+        return { blocked: true, text: cleanFull, el: primaryEl, isPending: false, level: 3 };
+      }
+      if (IP_PATTERNS.normal.test(sanitizedFull)) {
+        return { blocked: false, text: cleanFull, el: primaryEl, isPending: false, level: 3 };
+      }
+      if (IP_PATTERNS.pending.test(sanitizedFull)) {
+        return { blocked: false, text: cleanFull, el: primaryEl, isPending: true, level: 3 };
+      }
+    }
+
+    // 终态保证：确定性赋值正常 (Zero Silent Failure)
+    return { blocked: false, text: cleanFull, el: primaryEl, isPending: false, level: 0 };
+  }
+
+  function injectIpStatus(card) {
+    const statusInfo = extractCardIpStatus(card);
+    if (statusInfo.isPending) {
+      card.dataset.xrvStatus = 'pending';
+      return;
+    }
+
+    const blocked = statusInfo.blocked;
+    // 确保 100% 确定性打标，杜绝逃逸
     card.dataset.xrvBlocked = blocked ? '1' : '0';
     card.dataset.xrvIpBlocked = blocked ? '1' : '0';
 
+    if (blocked) card.classList.add('xrv-card-blocked');
+    else card.classList.remove('xrv-card-blocked');
+
+    const el = statusInfo.el || (SITE.statusSelector ? card.querySelector(SITE.statusSelector) : null);
+    if (!el) return;
+
+    const text = statusInfo.text;
+    const sig = `${text}#${blocked}`;
+
     if (SITE.name === 'panstar') {
-      const sig = `${text}#${blocked}`;
       if (el.dataset.xrvIpSig === sig && (el.classList.contains('xrv-ip-ban') || el.classList.contains('xrv-ip-ok'))) {
         return;
       }
       el.dataset.xrvIpSig = sig;
       el.classList.remove('xrv-ip-ok', 'xrv-ip-ban');
-      if (blocked) card.classList.add('xrv-card-blocked');
-      else card.classList.remove('xrv-card-blocked');
       if (!/^●/.test(el.textContent.trim())) {
         el.insertAdjacentText('afterbegin', '● ');
       }
@@ -766,13 +1092,10 @@
     }
 
     // Akile
-    const sig = `${text}#${blocked}`;
     if (el.dataset.xrvIpSig === sig && el.querySelector('.xrv-ip-ok, .xrv-ip-ban')) {
       return;
     }
     el.dataset.xrvIpSig = sig;
-    if (blocked) card.classList.add('xrv-card-blocked');
-    else card.classList.remove('xrv-card-blocked');
 
     let tag = el.querySelector('.xrv-ip-ok, .xrv-ip-ban');
     if (!tag) {
@@ -847,8 +1170,8 @@
 
     const networkField = SITE.findField(card, 'network');
     const rawNetwork = networkField ? (SITE.networkUsage(networkField.valueEl) || '') : '';
-    const ipEl = card.querySelector(SITE.statusSelector);
-    const rawIp = ipEl ? SITE.ipText(ipEl).trim() : '';
+    const ipStatusInfo = extractCardIpStatus(card);
+    const rawIp = ipStatusInfo.text || (card.dataset.xrvIpBlocked === '1' ? 'blocked' : 'normal');
 
     const sig = computeCardSignature(rawRenewal, rawExpiry, salePrice, rawIp, rawNetwork);
     let wrapper = card.querySelector('.xrv-row');
@@ -1084,8 +1407,10 @@
 
       if (hidden) {
         unit.classList.add('xrv-filter-hidden');
+        unit.style.setProperty('display', 'none', 'important');
       } else {
         unit.classList.remove('xrv-filter-hidden');
+        unit.style.removeProperty('display');
         totalCount++;
         if (isBlocked) blockedCount++;
         else normalCount++;
@@ -1177,7 +1502,7 @@
           <div class="xrv-hud-brand">
             <span class="xrv-hud-logo">⚡</span>
             <span class="xrv-hud-title">${zh ? 'XRV 交易所助手' : 'XRV Market Assistant'}</span>
-            <span class="xrv-hud-ver">v0.4.0</span>
+            <span class="xrv-hud-ver">v0.4.2</span>
           </div>
           <div class="xrv-hud-stats" id="xrv-stats-container">
             ${zh ? '共' : 'Total'} <b id="xrv-stat-total">0</b> ${zh ? '台' : ''} (<span class="xrv-text-green">${zh ? '正常' : 'Normal'} <b id="xrv-stat-normal">0</b></span> / <span class="xrv-text-red">${zh ? '异常' : 'Blocked'} <b id="xrv-stat-blocked">0</b></span>) · <span class="xrv-text-gold">${zh ? '折价捡漏' : 'Deals'} <b id="xrv-stat-discount">0</b> ${zh ? '台' : ''}</span>
@@ -1241,22 +1566,55 @@
         }
       });
 
-      // 绑定筛选开关事件
-      const hideBlockedInput = hud.querySelector('#xrv-filter-hide-blocked');
-      if (hideBlockedInput) {
-        hideBlockedInput.addEventListener('change', (e) => {
-          filterState.hideBlocked = e.target.checked;
+      // 绑定筛选开关事件（input 与 change 全覆盖，结合 label click 响应式自愈与防冒泡）
+      const bindFilterCheckbox = (inputId, stateKey) => {
+        const input = hud.querySelector(inputId);
+        if (!input) return;
+        const syncState = (checked) => {
+          filterState[stateKey] = checked;
+          if (input.checked !== checked) input.checked = checked;
           applySortAndFilters();
-        });
-      }
+        };
+        input.addEventListener('change', (e) => syncState(e.target.checked));
+        input.addEventListener('input', (e) => syncState(e.target.checked));
 
-      const onlyDiscountInput = hud.querySelector('#xrv-filter-only-discount');
-      if (onlyDiscountInput) {
-        onlyDiscountInput.addEventListener('change', (e) => {
-          filterState.onlyDiscount = e.target.checked;
-          applySortAndFilters();
-        });
+        const label = input.closest('label') || input.parentElement;
+        if (label) {
+          label.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const prevVal = filterState[stateKey];
+            if (e.target !== input) {
+              setTimeout(() => {
+                if (filterState[stateKey] === prevVal) {
+                  const nextVal = !prevVal;
+                  input.checked = nextVal;
+                  syncState(nextVal);
+                }
+              }, 0);
+            }
+          });
+        }
+      };
+
+      bindFilterCheckbox('#xrv-filter-hide-blocked', 'hideBlocked');
+      bindFilterCheckbox('#xrv-filter-only-discount', 'onlyDiscount');
+    } else {
+      // HUD 已存在时做状态自愈与防脱节双向同步
+      const hideBlockedInput = hud.querySelector('#xrv-filter-hide-blocked');
+      if (hideBlockedInput && hideBlockedInput.checked !== filterState.hideBlocked) {
+        hideBlockedInput.checked = filterState.hideBlocked;
       }
+      const onlyDiscountInput = hud.querySelector('#xrv-filter-only-discount');
+      if (onlyDiscountInput && onlyDiscountInput.checked !== filterState.onlyDiscount) {
+        onlyDiscountInput.checked = filterState.onlyDiscount;
+      }
+      hud.querySelectorAll('.xrv-cycle-btn').forEach((b) => {
+        if (b.dataset.cycle === filterState.cycle) b.classList.add('active');
+        else b.classList.remove('active');
+      });
+      hud.querySelectorAll('.xrv-sort-btn').forEach((b) => {
+        b.dataset.active = (b.dataset.mode === currentSort) ? '1' : '';
+      });
     }
 
     // 自愈校验：确保 hud 是 anchorHost 的正前方兄弟节点，绝不落入列表网格内部

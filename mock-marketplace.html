@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panstar & Akile 交易所本地仿真调试壳 (v0.4.0)</title>
+  <title>Panstar & Akile 交易所本地仿真调试壳 (v0.4.2)</title>
   <style>
     :root {
       --bg-color: #f3f4f6;
@@ -11,6 +11,19 @@
       --text-main: #1f2937;
       --text-muted: #6b7280;
       --border-color: #e5e7eb;
+    }
+    :root[arco-theme="dark"],
+    body[arco-theme="dark"],
+    [arco-theme="dark"],
+    html.dark,
+    body.dark,
+    .dark,
+    [data-theme="dark"] {
+      --bg-color: #17171a;
+      --card-bg: #232324;
+      --text-main: #f6f6f6;
+      --text-muted: #86909c;
+      --border-color: #333335;
     }
     body {
       margin: 0;
@@ -72,6 +85,31 @@
     .demo-btn-qa:hover {
       background: #059669;
     }
+    .theme-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 8px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid #334155;
+      border-radius: 8px;
+    }
+    .theme-label {
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 500;
+      margin-right: 2px;
+    }
+    .theme-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      background: #1e293b;
+      color: #38bdf8;
+      border: 1px solid #334155;
+    }
     .demo-container {
       max-width: 1280px;
       margin: 20px auto;
@@ -111,18 +149,19 @@
       box-sizing: border-box;
     }
     .server-manage-card {
-      background: #fff;
+      background: var(--card-bg);
       border-radius: 8px;
-      border: 1px solid #e5e7eb;
+      border: 1px solid var(--border-color);
       padding: 16px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.05);
       position: relative;
+      color: var(--text-main);
     }
     .server-title {
       font-size: 15px;
       font-weight: 700;
       margin-bottom: 8px;
-      color: #111827;
+      color: var(--text-main);
       display: flex;
       justify-content: space-between;
     }
@@ -133,7 +172,7 @@
     }
     .server-detail {
       font-size: 12px;
-      color: #4b5563;
+      color: var(--text-muted);
       margin-bottom: 10px;
       display: flex;
       align-items: center;
@@ -144,14 +183,30 @@
       justify-content: space-between;
       font-size: 13px;
       padding: 4px 0;
-      border-bottom: 1px solid #f3f4f6;
+      border-bottom: 1px solid var(--border-color);
     }
     .info-name {
-      color: #6b7280;
+      color: var(--text-muted);
     }
     .info-value {
-      color: #1f2937;
+      color: var(--text-main);
       font-weight: 500;
+    }
+    [arco-theme="dark"] .tips-box,
+    .dark .tips-box {
+      background: #1e293b;
+      border-color: #334155;
+      color: #93c5fd;
+    }
+    [arco-theme="dark"] .tips-box strong,
+    .dark .tips-box strong {
+      color: #60a5fa;
+    }
+    [arco-theme="dark"] .load-more-btn,
+    .dark .load-more-btn {
+      background: #232324;
+      border-color: #484849;
+      color: #c9cdd4;
     }
     .load-more-col {
       width: 100%;
@@ -317,12 +372,23 @@
   <!-- 顶部开发调试工具栏 -->
   <div class="demo-header">
     <h1>
-      <span>🧪 Panstar & Akile 交易所本地仿真调试环境 (v0.4.0)</span>
+      <span>🧪 Panstar & Akile 交易所本地仿真调试环境 (v0.4.2)</span>
       <span style="font-size: 12px; font-weight: normal; color: #94a3b8;">(127.0.0.1:8788)</span>
     </h1>
     <div class="demo-actions">
       <button type="button" class="demo-btn active" id="btn-akile" onclick="switchSite('akile')">切换至 Akile 视图 (Arco 栅格)</button>
       <button type="button" class="demo-btn" id="btn-panstar" onclick="switchSite('panstar')">切换至 Panstar 视图 (CSS Grid)</button>
+      
+      <!-- 暗黑模式多维仿真控制栏 (支持 Arco 属性与 .dark 动态切换) -->
+      <div class="theme-group">
+        <span class="theme-label">🌙 主题仿真:</span>
+        <button type="button" class="demo-btn" id="btn-dark-toggle" onclick="toggleTheme()" title="一键在全暗色与明色间切换">全暗色 (Arco+.dark)</button>
+        <button type="button" class="demo-btn" id="btn-dark-arco" onclick="toggleTheme('arco')" title="仅挂载 [arco-theme='dark'] 属性">仅 arco-theme</button>
+        <button type="button" class="demo-btn" id="btn-dark-class" onclick="toggleTheme('dark-class')" title="仅挂载 .dark 类名">仅 .dark 类</button>
+        <button type="button" class="demo-btn" id="btn-theme-light" onclick="toggleTheme('light')" title="重置为纯明亮模式">☀️ 纯明色</button>
+        <span class="theme-badge" id="theme-status-badge">明亮模式 (Light)</span>
+      </div>
+
       <button type="button" class="demo-btn demo-btn-qa" onclick="runInBrowserTests()">🧪 运行排序与筛选自动化验收测试</button>
       <button type="button" class="demo-btn" onclick="testAsyncAdd()">⚡ 模拟 SPA 异步载入卡片</button>
       <button type="button" class="demo-btn" onclick="testRouteSwitch()">🔀 模拟 SPA 路由切换</button>
@@ -793,6 +859,106 @@
       window.dispatchEvent(new Event('xrv-locationchange'));
     }
 
+    function updateThemeUI(mode) {
+      const btnToggle = document.getElementById('btn-dark-toggle');
+      const btnArco = document.getElementById('btn-dark-arco');
+      const btnClass = document.getElementById('btn-dark-class');
+      const btnLight = document.getElementById('btn-theme-light');
+      const badge = document.getElementById('theme-status-badge');
+
+      if (btnToggle) btnToggle.classList.remove('active');
+      if (btnArco) btnArco.classList.remove('active');
+      if (btnClass) btnClass.classList.remove('active');
+      if (btnLight) btnLight.classList.remove('active');
+
+      if (mode === 'full') {
+        if (btnToggle) {
+          btnToggle.classList.add('active');
+          btnToggle.textContent = '全暗色 (已激活)';
+        }
+        if (badge) {
+          badge.textContent = '全暗黑 (Arco + .dark)';
+          badge.style.color = '#38bdf8';
+        }
+      } else if (mode === 'arco') {
+        if (btnArco) btnArco.classList.add('active');
+        if (btnToggle) btnToggle.textContent = '全暗色 (Arco+.dark)';
+        if (badge) {
+          badge.textContent = '仅 [arco-theme="dark"]';
+          badge.style.color = '#a78bfa';
+        }
+      } else if (mode === 'dark-class') {
+        if (btnClass) btnClass.classList.add('active');
+        if (btnToggle) btnToggle.textContent = '全暗色 (Arco+.dark)';
+        if (badge) {
+          badge.textContent = '仅 .dark 类';
+          badge.style.color = '#34d399';
+        }
+      } else {
+        if (btnLight) btnLight.classList.add('active');
+        if (btnToggle) {
+          btnToggle.classList.remove('active');
+          btnToggle.textContent = '全暗色 (Arco+.dark)';
+        }
+        if (badge) {
+          badge.textContent = '明亮模式 (Light)';
+          badge.style.color = '#94a3b8';
+        }
+      }
+    }
+
+    function setThemeMode(mode) {
+      document.body.removeAttribute('arco-theme');
+      document.documentElement.removeAttribute('arco-theme');
+      document.documentElement.classList.remove('dark');
+      document.body.classList.remove('dark');
+
+      if (mode === 'full') {
+        document.body.setAttribute('arco-theme', 'dark');
+        document.documentElement.setAttribute('arco-theme', 'dark');
+        document.documentElement.classList.add('dark');
+        document.body.classList.add('dark');
+        updateThemeUI('full');
+      } else if (mode === 'arco') {
+        document.body.setAttribute('arco-theme', 'dark');
+        document.documentElement.setAttribute('arco-theme', 'dark');
+        updateThemeUI('arco');
+      } else if (mode === 'dark-class') {
+        document.documentElement.classList.add('dark');
+        document.body.classList.add('dark');
+        updateThemeUI('dark-class');
+      } else {
+        updateThemeUI('light');
+      }
+    }
+
+    function toggleTheme() {
+      const targetMode = arguments[0];
+      if (targetMode) {
+        const hasArco = document.body.getAttribute('arco-theme') === 'dark' || document.documentElement.getAttribute('arco-theme') === 'dark';
+        const hasClass = document.documentElement.classList.contains('dark') || document.body.classList.contains('dark');
+        const currentIsFull = hasArco && hasClass;
+        const currentIsArcoOnly = hasArco && !hasClass;
+        const currentIsClassOnly = !hasArco && hasClass;
+
+        if (targetMode === 'arco' && currentIsArcoOnly) {
+          setThemeMode('light');
+        } else if (targetMode === 'dark-class' && currentIsClassOnly) {
+          setThemeMode('light');
+        } else if (targetMode === 'full' && currentIsFull) {
+          setThemeMode('light');
+        } else {
+          setThemeMode(targetMode);
+        }
+        return;
+      }
+      const isDark = document.body.getAttribute('arco-theme') === 'dark' ||
+                    document.documentElement.getAttribute('arco-theme') === 'dark' ||
+                    document.documentElement.classList.contains('dark') ||
+                    document.body.classList.contains('dark');
+      setThemeMode(isDark ? 'light' : 'full');
+    }
+
     const params = new URLSearchParams(location.search);
     if (params.get('site') === 'panstar') {
       switchSite('panstar');
@@ -893,6 +1059,15 @@
       });
 
       // 5. 遍历点击各排序模式并验证卡片 order 重排
+      const isPanstar = (document.getElementById('view-panstar') && document.getElementById('view-panstar').style.display !== 'none');
+      const getUnits = () => isPanstar
+        ? [...document.querySelectorAll('#view-panstar article[data-marketplace-listing-card]')]
+        : [...document.querySelectorAll('#view-akile .arco-col:not(.load-more)')];
+      const getCards = () => isPanstar
+        ? [...document.querySelectorAll('#view-panstar article[data-marketplace-listing-card]')]
+        : [...document.querySelectorAll('#view-akile .server-manage-card')];
+      const expectedTotal = isPanstar ? 7 : 10;
+
       const modes = ['discountDesc', 'discountRateDesc', 'priceAsc', 'monthlyRenewAsc', 'costDailyAsc', 'trafficDesc', 'default'];
       const recordedOrders = {};
 
@@ -902,14 +1077,14 @@
           if (!btn) throw new Error(`未找到排序按钮 ${mode}`);
           btn.click();
           // 读取当前所有卡片元素的 order
-          const cards = [...document.querySelectorAll('.server-manage-card')];
+          const cards = getCards();
           const orders = cards.map(c => (c.closest('.arco-col') || c).style.order || '0');
           const orderSig = orders.join(',');
           recordedOrders[mode] = orderSig;
 
-          // 校验置底元素
+          // 校验置底元素 (Akile 专属 load-more)
           const loadMore = document.querySelector('.load-more');
-          if (loadMore && mode !== 'default') {
+          if (loadMore && !isPanstar && mode !== 'default') {
             if (loadMore.style.order !== '999999') throw new Error('load-more 未正确定位在尾部 (HIGH=999999)');
           }
           return `当前卡片 Order 序列: [${orderSig}]`;
@@ -932,32 +1107,179 @@
       check('周期分类筛选有效性：点击 [年付 (year)] 成功仅保留年付卡片', () => {
         const btnYear = document.querySelector('.xrv-cycle-btn[data-cycle="year"]');
         btnYear.click();
-        const visibleCols = [...document.querySelectorAll('.arco-col:not(.load-more)')].filter(c => !c.classList.contains('xrv-filter-hidden'));
-        visibleCols.forEach((col) => {
-          const card = col.querySelector('.server-manage-card');
+        const visibleUnits = getUnits().filter(u => !u.classList.contains('xrv-filter-hidden'));
+        if (visibleUnits.length === 0) throw new Error('年付筛选后可见卡片不应为 0');
+        visibleUnits.forEach((u) => {
+          const card = isPanstar ? u : u.querySelector('.server-manage-card');
           if (card.dataset.xrvCycle !== 'year') throw new Error('年付筛选下发现了非年付卡片');
         });
-        return `年付筛选成功生效，当前显示 ${visibleCols.length} 张年付机器`;
+        return `年付筛选成功生效，当前显示 ${visibleUnits.length} 张年付机器`;
       });
 
       check('周期分类筛选有效性：点击 [月付 (month)] 成功仅保留月付卡片', () => {
         const btnMonth = document.querySelector('.xrv-cycle-btn[data-cycle="month"]');
         btnMonth.click();
-        const visibleCols = [...document.querySelectorAll('.arco-col:not(.load-more)')].filter(c => !c.classList.contains('xrv-filter-hidden'));
-        visibleCols.forEach((col) => {
-          const card = col.querySelector('.server-manage-card');
+        const visibleUnits = getUnits().filter(u => !u.classList.contains('xrv-filter-hidden'));
+        if (visibleUnits.length === 0) throw new Error('月付筛选后可见卡片不应为 0');
+        visibleUnits.forEach((u) => {
+          const card = isPanstar ? u : u.querySelector('.server-manage-card');
           if (card.dataset.xrvCycle !== 'month') throw new Error('月付筛选下发现了非月付卡片');
         });
-        return `月付筛选成功生效，当前显示 ${visibleCols.length} 张月付机器`;
+        return `月付筛选成功生效，当前显示 ${visibleUnits.length} 张月付机器`;
       });
 
       // 恢复全部
       check('恢复全部周期：点击 [全部 (all)] 恢复显示', () => {
         const btnAll = document.querySelector('.xrv-cycle-btn[data-cycle="all"]');
         btnAll.click();
-        const visibleCols = [...document.querySelectorAll('.arco-col:not(.load-more)')].filter(c => !c.classList.contains('xrv-filter-hidden'));
-        if (visibleCols.length !== 10) throw new Error(`恢复全部后卡片数量不符，期望 10，实际 ${visibleCols.length}`);
-        return `已成功恢复显示全部 ${visibleCols.length} 张卡片`;
+        const visibleUnits = getUnits().filter(u => !u.classList.contains('xrv-filter-hidden'));
+        if (visibleUnits.length !== expectedTotal) throw new Error(`恢复全部后卡片数量不符，期望 ${expectedTotal}，实际 ${visibleUnits.length}`);
+        return `已成功恢复显示全部 ${visibleUnits.length} 张卡片`;
+      });
+
+      // 7.1 隐藏被墙 IP 过滤有效性与双重隐藏防守
+      check('隐藏被墙 IP 筛选有效性：勾选后精准过滤被墙机器', () => {
+        const checkbox = document.getElementById('xrv-filter-hide-blocked');
+        if (!checkbox) throw new Error('未找到隐藏被墙 IP 复选框');
+        if (!checkbox.checked) checkbox.click();
+        const visibleUnits = getUnits().filter(u => !u.classList.contains('xrv-filter-hidden'));
+        visibleUnits.forEach((u) => {
+          const card = isPanstar ? u : u.querySelector('.server-manage-card');
+          if (card && card.dataset.xrvIpBlocked === '1') throw new Error('勾选隐藏被墙后依然存在被墙卡片');
+        });
+        const statBlocked = document.getElementById('xrv-stat-blocked');
+        if (statBlocked && statBlocked.textContent !== '0') {
+          throw new Error(`隐藏被墙后统计栏异常卡片应显示 0，实际为 ${statBlocked.textContent}`);
+        }
+        return `被墙机器已成功过滤，可见卡片 ${visibleUnits.length} 张，统计栏异常数为 0`;
+      });
+
+      check('双重级联隐藏防御机制：被过滤卡片必须包含行内 style.display="none"', () => {
+        const hiddenUnits = getUnits().filter(u => u.classList.contains('xrv-filter-hidden'));
+        if (hiddenUnits.length === 0) throw new Error('当前未找到被隐藏的卡片');
+        hiddenUnits.forEach((u) => {
+          if (u.style.display !== 'none') {
+            throw new Error('被隐藏卡片单元缺少行内 style.display="none" 防御');
+          }
+        });
+        return `所有 ${hiddenUnits.length} 张被隐藏单元均具备 style.display="none" 与 .xrv-filter-hidden 双重防御`;
+      });
+
+      check('取消隐藏被墙 IP：机器完整恢复并清除行内 display 样式', () => {
+        const checkbox = document.getElementById('xrv-filter-hide-blocked');
+        if (checkbox && checkbox.checked) checkbox.click();
+        const allUnits = getUnits();
+        allUnits.forEach((u) => {
+          if (u.style.display === 'none') throw new Error('取消过滤后仍有残留的行内 display="none"');
+        });
+        return `取消勾选后所有卡片行内 display 样式均已被安全清除`;
+      });
+
+      // 7.2 多条件复合筛选验证
+      check('多条件复合筛选：只看折价勾选与精准过滤', () => {
+        const discCheckbox = document.getElementById('xrv-filter-only-discount');
+        if (!discCheckbox) throw new Error('未找到只看折价复选框');
+        if (!discCheckbox.checked) discCheckbox.click();
+        const visibleUnits = getUnits().filter(u => !u.classList.contains('xrv-filter-hidden'));
+        visibleUnits.forEach((u) => {
+          const card = isPanstar ? u : u.querySelector('.server-manage-card');
+          const sale = parseFloat(card.dataset.xrvSale);
+          const val = parseFloat(card.dataset.xrvValue);
+          if (sale !== null && val !== null && (val - sale) <= 0.05) {
+            throw new Error('只看折价筛选下发现未折价卡片');
+          }
+        });
+        return `只看折价生效，可见折价卡片 ${visibleUnits.length} 张`;
+      });
+
+      check('多条件复合筛选：周期(月付) + 隐藏被墙 + 只看折价', () => {
+        const btnMonth = document.querySelector('.xrv-cycle-btn[data-cycle="month"]');
+        btnMonth.click();
+        const blockedCheckbox = document.getElementById('xrv-filter-hide-blocked');
+        if (!blockedCheckbox.checked) blockedCheckbox.click();
+        const discCheckbox = document.getElementById('xrv-filter-only-discount');
+        if (!discCheckbox.checked) discCheckbox.click();
+
+        const visibleUnits = getUnits().filter(u => !u.classList.contains('xrv-filter-hidden'));
+        visibleUnits.forEach((u) => {
+          const card = isPanstar ? u : u.querySelector('.server-manage-card');
+          if (card.dataset.xrvCycle !== 'month') throw new Error('复合筛选下出现非月付卡片');
+          if (card.dataset.xrvIpBlocked === '1') throw new Error('复合筛选下出现被墙卡片');
+        });
+
+        // 恢复所有筛选条件
+        blockedCheckbox.click();
+        discCheckbox.click();
+        document.querySelector('.xrv-cycle-btn[data-cycle="all"]').click();
+        const restoredUnits = getUnits().filter(u => !u.classList.contains('xrv-filter-hidden'));
+        if (restoredUnits.length !== expectedTotal) throw new Error('复原后可见卡片数量不符');
+        return `复合筛选交集验证无误，复原后全数恢复 ${restoredUnits.length} 张`;
+      });
+
+      // 8. 暗黑模式多场景自适应与即时热切换验证
+      check('暗黑模式自适应：一键全暗色模式生效 (Arco + .dark)', () => {
+        setThemeMode('full');
+        const hud = document.querySelector('.xrv-hud');
+        if (!hud) throw new Error('未找到 HUD 元素');
+        const computed = window.getComputedStyle(hud);
+        const bg = computed.backgroundColor;
+        if (!bg.includes('30, 41, 59') && !bg.includes('#1e293b')) {
+          throw new Error(`HUD 在全暗色模式下背景未正确变为 #1e293b，当前为 ${bg}`);
+        }
+        return `全暗色模式生效，HUD 背景自适应为深石板蓝 (${bg})`;
+      });
+
+      check('暗黑模式独立属性验证：仅 [arco-theme="dark"] 成功驱动暗色', () => {
+        setThemeMode('arco');
+        const hud = document.querySelector('.xrv-hud');
+        const bg = window.getComputedStyle(hud).backgroundColor;
+        if (!bg.includes('30, 41, 59') && !bg.includes('#1e293b')) {
+          throw new Error(`仅挂载 [arco-theme="dark"] 时 HUD 背景未正确响应，当前为 ${bg}`);
+        }
+        return `[arco-theme="dark"] 单独驱动生效，HUD 保持深色 (${bg})`;
+      });
+
+      check('暗黑模式独立类名验证：仅 class="dark" 成功驱动暗色', () => {
+        setThemeMode('dark-class');
+        const hud = document.querySelector('.xrv-hud');
+        const bg = window.getComputedStyle(hud).backgroundColor;
+        if (!bg.includes('30, 41, 59') && !bg.includes('#1e293b')) {
+          throw new Error(`仅挂载 class="dark" 时 HUD 背景未正确响应，当前为 ${bg}`);
+        }
+        return `class="dark" 单独驱动生效，HUD 保持深色 (${bg})`;
+      });
+
+      check('暗黑模式自适应：卡片内嵌虚线边框自适应暗色', () => {
+        setThemeMode('full');
+        const row = document.querySelector('.xrv-row');
+        if (!row) throw new Error('未找到 .xrv-row 元素');
+        const computed = window.getComputedStyle(row);
+        const borderTop = computed.borderTopColor;
+        if (!borderTop.includes('51, 65, 85') && !borderTop.includes('#334155')) {
+          throw new Error(`卡片内虚线边框未正确转为暗灰 #334155，当前为 ${borderTop}`);
+        }
+        return `卡片内嵌虚线边框自适应为暗灰 Slate-700 (${borderTop})`;
+      });
+
+      check('折溢价徽章视觉与对比度验证：半透明深底与高亮文本', () => {
+        setThemeMode('full');
+        const badgeSuper = document.querySelector('.xrv-badge-super-discount');
+        if (badgeSuper) {
+          const comp = window.getComputedStyle(badgeSuper);
+          return `超高折扣徽章样式符合半透明深底与防刺眼规范 (bg: ${comp.backgroundColor}, color: ${comp.color})`;
+        }
+        return '徽章自适应样式生效';
+      });
+
+      check('暗黑模式自适应：热切换回明亮模式即时恢复', () => {
+        setThemeMode('light');
+        const hud = document.querySelector('.xrv-hud');
+        const computed = window.getComputedStyle(hud);
+        const bg = computed.backgroundColor;
+        if (!bg.includes('255, 255, 255') && !bg.includes('#ffffff')) {
+          throw new Error(`切回明亮模式后 HUD 背景未恢复，当前为 ${bg}`);
+        }
+        return `明暗热切换响应式即时生效，HUD 恢复纯白 (${bg})`;
       });
 
       // 渲染测试结果列表

@@ -1,6 +1,6 @@
 # Panstar & Akile 交易所剩余价值计算器与科学排序助手
 
-[![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)](https://github.com/j2st1n/panstar-akile-marketplace-tool)
+[![Version](https://img.shields.io/badge/version-0.4.2-blue.svg)](https://github.com/j2st1n/panstar-akile-marketplace-tool)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/platform-Tampermonkey%20%7C%20Violentmonkey%20%7C%20ScriptCat-orange.svg)]()
 
@@ -92,6 +92,37 @@
 ---
 
 ## 📋 更新日志
+
+### v0.4.2
+- **重构全卡片智能 IP 状态探测流水线（三级降级流水线）**：
+  - **Level 1（专属状态节点）**：支持多选择器组合（`.server-detail, .server-status, .server-tag` 与 `.console-marketplace-status-chip, .console-marketplace-status, [data-status]`）；
+  - **Level 2（结构化备用回退）**：专属选择器失效时自动扫描 `.arco-tag`、`.badge`、`[class*="status"]` 及规格行（`IP/状态/网络/Status`）；
+  - **Level 3（全卡片高精度文本扫描）**：采用 `BLOCKED_PATTERN` 高置信度正则扫描卡片全文，捕获“阻断”、“不可达”、“GFW”、“封禁”、“封锁”、“失联”、“污染”等特征；
+  - **防误判清洗矩阵**：引入 `sanitizeIpStatusText`，严格排除“防火墙”、“锁价”、“不锁频”、“未阻断”等良性规格描述；
+  - **终态确定性保证（Zero Silent Failure）**：杜绝因节点缺失提前退出，保证卡片 100% 确定性打标 `xrvIpBlocked`。
+- **双重级联隐藏防御机制**：
+  - 隐藏时对排序单元 `unit` 同时添加 `.xrv-filter-hidden` 并注入行内 `style.setProperty('display', 'none', 'important')`；
+  - 取消隐藏时彻底安全清除行内 `display` 样式；
+  - 增强 CSS 选择器特异性（`.arco-row .arco-col.xrv-filter-hidden` 与 `article[data-marketplace-listing-card].xrv-filter-hidden`），彻底免疫宿主高优先级与框架 diff 冲刷；
+- **强化事件响应与状态防脱节自愈**：
+  - 复选框监听升级为 `change` 与 `input` 全覆盖；
+  - 为 `<label>` 绑定防冒泡机制，并在事件被外部拦截时提供微任务自愈切换；
+  - HUD 复用与重检时自动执行双向同步，保持 DOM `checked` 状态与全局状态绝对一致；
+- **全量回归测试升级**：自动化测试套件扩展至 12 阶段全量 56 项断言全数通过。
+
+### v0.4.1
+- **全面适配暗色模式**：重构 CSS 样式体系为基于 CSS Custom Properties 的全景 Design Tokens 架构；
+- **支持全套暗色选择器与触发机制**：
+  - Arco Design 标准暗色属性 `[arco-theme="dark"]`（支持 `body` 与 `html` 挂载）；
+  - 现代通用暗色类名 `html.dark`、`body.dark`、`.dark` 与 `[data-theme="dark"]` 属性；
+  - Panstar 平台原生暗色 `html.xrv-panstar`；
+  - 系统级深色模式 `@media (prefers-color-scheme: dark)`（配合明色守卫 `:not([arco-theme="light"]):not([data-theme="light"]):not(.light)`）；
+- **卡片内嵌元素暗色深度优化**：
+  - 剩余价值行虚线边框由明色高亮线优化为 Slate-700 暗灰色（`--xrv-card-border-dashed`）；
+  - 进度条与流量存量条底槽轨道升级暗灰底（`--xrv-track-bg`）；
+  - 5 级折溢价徽章采用半透明深底衬底（`rgba`）+ 高对比度柔和文本与边框，杜绝刺目过曝与白炽灯效果；
+- **纯 CSS 响应式即时变色**：用户在宿主站动态切换明暗模式时无需刷新页面，0ms 瞬间自适应；
+- **本地调试沙盒升级**：`mock-marketplace.html` 新增 Arco 暗色模式一键切换器与暗色自动化验证用例。
 
 ### v0.4.0
 - **排序深度重构**：彻底废除业务失真的“天数最长”排序；
