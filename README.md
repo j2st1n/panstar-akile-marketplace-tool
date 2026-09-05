@@ -1,6 +1,6 @@
 # Panstar & Akile 交易所剩余价值计算器与科学排序助手
 
-[![Version](https://img.shields.io/badge/version-0.4.2-blue.svg)](https://github.com/j2st1n/panstar-akile-marketplace-tool)
+[![Version](https://img.shields.io/badge/version-0.4.3-blue.svg)](https://github.com/j2st1n/panstar-akile-marketplace-tool)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/platform-Tampermonkey%20%7C%20Violentmonkey%20%7C%20ScriptCat-orange.svg)]()
 
@@ -92,6 +92,9 @@
 ---
 
 ## 📋 更新日志
+
+### v0.4.3
+- **统计看板语义优化**：顶部 HUD 实时数据看板中，将原“正常 / 异常”文案优化调整为“**IP正常 / 被墙**”（英文模式同步为 `Normal IP / Blocked`），清晰直观对应右侧“隐藏被墙 IP”筛选器，彻底消除“机器故障/解析报错”的语义误解。
 
 ### v0.4.2
 - **重构全卡片智能 IP 状态探测流水线（三级降级流水线）**：
